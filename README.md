@@ -51,7 +51,7 @@ Up to **5 radiator valves (TRVs)**, a setup wizard, and an automatically created
 ## 2. Install Aquecimento Ninjas
 
 ### HACS (recommended)
-1. **HACS → ⋮ → Custom repositories** → URL `https://github.com/YOUR_GITHUB_USER/aquecimento_ninjas`, type **Integration**.
+1. **HACS → ⋮ → Custom repositories** → URL `https://github.com/noesisaoliveira/aquecimento_ninjas`, type **Integration**.
 2. Search **Aquecimento Ninjas** → **Download** → restart Home Assistant.
 
 ### Manual
@@ -133,13 +133,6 @@ HACS shows an update when a new **GitHub release** is published. See [CHANGELOG.
 | Boiler never fires | Existing thermostat: is its target sensor the reference sensor? Created: is the relay correct? |
 | Dashboard missing | Check the log; run `aquecimento_ninjas.create_dashboard` |
 
-## For maintainers – publishing a release
-
-1. Replace `YOUR_GITHUB_USER` in `manifest.json`, `const.py` and this README with your GitHub user/organisation.
-2. Bump `version` in `custom_components/aquecimento_ninjas/manifest.json` **and** `VERSION` in `const.py`.
-3. Add the changes to `CHANGELOG.md`.
-4. Commit, then create a GitHub **release** with tag `vX.Y.Z` (same version). The *Release check* workflow verifies it.
-5. Add the topics `home-assistant`, `hacs`, `integration` and a description to the repository (HACS requirement).
 
 ## License
 

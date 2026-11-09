@@ -6,7 +6,7 @@ from homeassistant.const import Platform
 
 DOMAIN = "aquecimento_ninjas"
 VERSION = "1.0.0"
-DOCS_URL = "https://github.com/YOUR_GITHUB_USER/aquecimento_ninjas"
+DOCS_URL = "https://github.com/noesisaoliveira/aquecimento_ninjas"
 
 PLATFORMS: list[Platform] = [
     Platform.SWITCH,
