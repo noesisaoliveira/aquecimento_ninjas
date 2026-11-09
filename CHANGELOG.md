@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 – 2026-11-09
+
+- Integration icon (`brand/icon.png`, `brand/icon@2x.png`) for Home Assistant and the HACS Marketplace.
+
 ## 1.0.0 – 2026-11-09
 
 First release.

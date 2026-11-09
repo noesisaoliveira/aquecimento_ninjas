@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import voluptuous as vol
-
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -14,8 +12,15 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er, selector
+from homeassistant.helpers import (
+    config_validation as cv,
+    entity_registry as er,
+    selector,
+)
 from homeassistant.util import slugify
+
+# Newer Home Assistant releases replaced voluptuous with its fork 'probatio'.
+vol: Any = getattr(cv, "probatio", None) or getattr(cv, "vol")
 
 from .const import (
     BETTER_THERMOSTAT_DOMAIN,
