@@ -1,0 +1,201 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Aquecimento Ninjas",
+        "description": "Per-room heating with Better Thermostat (required). Up to 5 radiator valves in total.",
+        "data": {
+          "name": "Name",
+          "boiler_mode": "Boiler thermostat"
+        },
+        "data_description": {
+          "boiler_mode": "Use a thermostat you already have (e.g. generic_thermostat) or let the integration create one."
+        }
+      },
+      "boiler": {
+        "title": "Boiler",
+        "description": "Choose how the boiler is controlled.",
+        "data": {
+          "boiler_climate": "Existing boiler thermostat",
+          "boiler_switch": "Boiler switch (relay)",
+          "cold_tolerance": "Cold tolerance",
+          "hot_tolerance": "Hot tolerance",
+          "min_cycle": "Minimum cycle duration"
+        },
+        "data_description": {
+          "boiler_climate": "Climate entity that fires the boiler. Set its target sensor to the 'Reference temperature' sensor of this integration.",
+          "boiler_switch": "Switch that turns the boiler on. Optional for an existing thermostat (used for the statistics).",
+          "cold_tolerance": "Boiler turns on when the reference temperature is this much below the target.",
+          "hot_tolerance": "Boiler turns off when the reference temperature is this much above the target.",
+          "min_cycle": "Minimum time the boiler stays on or off. 5 minutes is recommended."
+        }
+      },
+      "room": {
+        "title": "Room {room_number}",
+        "description": "Valves used: {valves_used} of {valves_max}. A room with two radiators uses one Better Thermostat with both valves.",
+        "data": {
+          "room_name": "Room name",
+          "climate": "Better Thermostat of the room",
+          "valves": "Radiator valves (TRV) of the room",
+          "sensor": "Room temperature sensor",
+          "batteries": "Valve battery sensors",
+          "windows": "Window sensors",
+          "add_another": "Add another room"
+        },
+        "data_description": {
+          "climate": "Create it first in Better Thermostat with the same valves and room sensor.",
+          "valves": "The valves controlled by that Better Thermostat (counted for the 5-valve limit).",
+          "batteries": "Optional. Used for the dashboard and low-battery notifications.",
+          "windows": "Optional. Used for the dashboard and open-window notifications."
+        }
+      },
+      "presence": {
+        "title": "Presence and notifications",
+        "data": {
+          "persons": "People",
+          "away_delay": "Away mode delay",
+          "notify_service": "Notification service",
+          "notify_windows": "Notify open windows",
+          "notify_battery": "Notify low batteries",
+          "battery_threshold": "Low battery threshold"
+        },
+        "data_description": {
+          "persons": "Optional. When everyone is away for the delay, away mode turns on; it turns off when someone arrives.",
+          "notify_service": "Optional, e.g. notify.mobile_app_my_phone"
+        }
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Creates a dashboard with the views Heating and Charts.",
+        "data": {
+          "create_dashboard": "Create dashboard",
+          "dashboard_title": "Dashboard title"
+        }
+      }
+    },
+    "error": {
+      "too_many_valves": "Maximum of 5 valves in total.",
+      "no_valves": "Select at least one valve.",
+      "valve_in_use": "This valve is already used in another room.",
+      "duplicate_room": "A room with this name already exists.",
+      "climate_in_use": "This Better Thermostat is already used in another room.",
+      "not_better_thermostat": "Select a Better Thermostat climate entity.",
+      "boiler_is_room": "The boiler thermostat cannot be a Better Thermostat room.",
+      "notify_not_found": "Notification service not found."
+    },
+    "abort": {
+      "better_thermostat_missing": "Better Thermostat is not installed. Install it from HACS and configure your rooms first (see the documentation).",
+      "single_instance_allowed": "Aquecimento Ninjas is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Aquecimento Ninjas",
+        "menu_options": {
+          "presence": "Presence and notifications",
+          "boiler": "Boiler",
+          "rooms": "Rooms",
+          "dashboard": "Dashboard"
+        }
+      },
+      "boiler": {
+        "title": "Boiler",
+        "data": {
+          "boiler_climate": "Existing boiler thermostat",
+          "boiler_switch": "Boiler switch (relay)",
+          "cold_tolerance": "Cold tolerance",
+          "hot_tolerance": "Hot tolerance",
+          "min_cycle": "Minimum cycle duration"
+        }
+      },
+      "room": {
+        "title": "Room {room_number}",
+        "description": "Valves used: {valves_used} of {valves_max}. Rooms are configured again from the first one; values are pre-filled.",
+        "data": {
+          "room_name": "Room name",
+          "climate": "Better Thermostat of the room",
+          "valves": "Radiator valves (TRV) of the room",
+          "sensor": "Room temperature sensor",
+          "batteries": "Valve battery sensors",
+          "windows": "Window sensors",
+          "add_another": "Add another room"
+        }
+      },
+      "presence": {
+        "title": "Presence and notifications",
+        "data": {
+          "persons": "People",
+          "away_delay": "Away mode delay",
+          "notify_service": "Notification service",
+          "notify_windows": "Notify open windows",
+          "notify_battery": "Notify low batteries",
+          "battery_threshold": "Low battery threshold"
+        }
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "data": {
+          "create_dashboard": "Create dashboard",
+          "dashboard_title": "Dashboard title",
+          "regenerate_dashboard": "Recreate the dashboard now (overwrites manual edits)"
+        }
+      }
+    },
+    "error": {
+      "too_many_valves": "Maximum of 5 valves in total.",
+      "no_valves": "Select at least one valve.",
+      "valve_in_use": "This valve is already used in another room.",
+      "duplicate_room": "A room with this name already exists.",
+      "climate_in_use": "This Better Thermostat is already used in another room.",
+      "not_better_thermostat": "Select a Better Thermostat climate entity.",
+      "boiler_is_room": "The boiler thermostat cannot be a Better Thermostat room.",
+      "notify_not_found": "Notification service not found."
+    }
+  },
+  "selector": {
+    "boiler_mode": {
+      "options": {
+        "existing": "Use an existing thermostat",
+        "create": "Create a boiler thermostat"
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "master": { "name": "Heating on" },
+      "away": { "name": "Away mode" },
+      "use_for_boiler": { "name": "{room} use for boiler" }
+    },
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": { "eco": "Eco", "comfort": "Comfort" }
+      }
+    },
+    "number": {
+      "away_temperature": { "name": "Away temperature" },
+      "comfort": { "name": "{room} comfort" },
+      "eco": { "name": "{room} eco" }
+    },
+    "sensor": {
+      "reference_temperature": { "name": "Reference temperature" },
+      "average_temperature": { "name": "Average temperature" },
+      "minimum_temperature": { "name": "Minimum temperature" },
+      "maximum_temperature": { "name": "Maximum temperature" },
+      "temperature_spread": { "name": "Warmest to coldest room" },
+      "boiler_on_time": { "name": "Boiler on today" },
+      "boiler_cycles": { "name": "Boiler cycles today" },
+      "boiler_average_cycle": { "name": "Boiler average cycle" }
+    },
+    "climate": {
+      "boiler": { "name": "Boiler" }
+    }
+  },
+  "services": {
+    "create_dashboard": {
+      "name": "Recreate dashboard",
+      "description": "Recreates the Aquecimento Ninjas dashboard from the current configuration. Manual edits are overwritten."
+    }
+  }
+}

@@ -1,0 +1,18 @@
+name: Release check
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag must match manifest and const versions
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          MANIFEST=$(python3 -c "import json;print(json.load(open('custom_components/aquecimento_ninjas/manifest.json'))['version'])")
+          CONST=$(python3 -c "import re;print(re.search(r'VERSION = \"(.+?)\"', open('custom_components/aquecimento_ninjas/const.py').read()).group(1))")
+          echo "tag=$TAG manifest=$MANIFEST const=$CONST"
+          test "$TAG" = "$MANIFEST" && test "$TAG" = "$CONST"

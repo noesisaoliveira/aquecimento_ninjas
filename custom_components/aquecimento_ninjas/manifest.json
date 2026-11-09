@@ -1,0 +1,14 @@
+{
+  "domain": "aquecimento_ninjas",
+  "name": "Aquecimento Ninjas",
+  "codeowners": ["@noesisaoliveira"],
+  "config_flow": true,
+  "dependencies": ["frontend", "lovelace"],
+  "documentation": "https://github.com/noesisaoliveira/aquecimento_ninjas",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/noesisaoliveira/aquecimento_ninjas/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "1.0.0"
+}

@@ -1,0 +1,201 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Aquecimento Ninjas",
+        "description": "Aquecimento por divisão com Better Thermostat (obrigatório). Até 5 válvulas de radiador no total.",
+        "data": {
+          "name": "Nome",
+          "boiler_mode": "Termóstato da caldeira"
+        },
+        "data_description": {
+          "boiler_mode": "Usar um termóstato que já existe (ex.: generic_thermostat) ou deixar a integração criar um."
+        }
+      },
+      "boiler": {
+        "title": "Caldeira",
+        "description": "Escolhe como a caldeira é controlada.",
+        "data": {
+          "boiler_climate": "Termóstato existente da caldeira",
+          "boiler_switch": "Interruptor da caldeira (relé)",
+          "cold_tolerance": "Tolerância a frio",
+          "hot_tolerance": "Tolerância a quente",
+          "min_cycle": "Duração mínima do ciclo"
+        },
+        "data_description": {
+          "boiler_climate": "Entidade climate que liga a caldeira. Define o sensor alvo dela como o sensor 'Temperatura de referência' desta integração.",
+          "boiler_switch": "Interruptor que liga a caldeira. Opcional com termóstato existente (usado nas estatísticas).",
+          "cold_tolerance": "A caldeira liga quando a temperatura de referência está este valor abaixo do objetivo.",
+          "hot_tolerance": "A caldeira desliga quando a temperatura de referência está este valor acima do objetivo.",
+          "min_cycle": "Tempo mínimo que a caldeira fica ligada ou desligada. Recomendado: 5 minutos."
+        }
+      },
+      "room": {
+        "title": "Divisão {room_number}",
+        "description": "Válvulas usadas: {valves_used} de {valves_max}. Uma divisão com dois radiadores usa um Better Thermostat com as duas válvulas.",
+        "data": {
+          "room_name": "Nome da divisão",
+          "climate": "Better Thermostat da divisão",
+          "valves": "Válvulas de radiador (TRV) da divisão",
+          "sensor": "Sensor de temperatura da divisão",
+          "batteries": "Sensores de bateria das válvulas",
+          "windows": "Sensores de janela",
+          "add_another": "Adicionar outra divisão"
+        },
+        "data_description": {
+          "climate": "Cria-o primeiro no Better Thermostat com as mesmas válvulas e o sensor da divisão.",
+          "valves": "As válvulas controladas por esse Better Thermostat (contam para o limite de 5).",
+          "batteries": "Opcional. Usado no painel e nas notificações de bateria fraca.",
+          "windows": "Opcional. Usado no painel e nas notificações de janela aberta."
+        }
+      },
+      "presence": {
+        "title": "Presença e notificações",
+        "data": {
+          "persons": "Pessoas",
+          "away_delay": "Atraso do modo ausente",
+          "notify_service": "Serviço de notificação",
+          "notify_windows": "Notificar janelas abertas",
+          "notify_battery": "Notificar bateria fraca",
+          "battery_threshold": "Limite de bateria fraca"
+        },
+        "data_description": {
+          "persons": "Opcional. Quando todos estão fora durante o atraso, o modo ausente liga; desliga quando alguém chega.",
+          "notify_service": "Opcional, ex.: notify.mobile_app_o_meu_telemovel"
+        }
+      },
+      "dashboard": {
+        "title": "Painel",
+        "description": "Cria um painel com as vistas Aquecimento e Gráficos.",
+        "data": {
+          "create_dashboard": "Criar painel",
+          "dashboard_title": "Título do painel"
+        }
+      }
+    },
+    "error": {
+      "too_many_valves": "Máximo de 5 válvulas no total.",
+      "no_valves": "Seleciona pelo menos uma válvula.",
+      "valve_in_use": "Esta válvula já está noutra divisão.",
+      "duplicate_room": "Já existe uma divisão com este nome.",
+      "climate_in_use": "Este Better Thermostat já está noutra divisão.",
+      "not_better_thermostat": "Seleciona uma entidade climate do Better Thermostat.",
+      "boiler_is_room": "O termóstato da caldeira não pode ser um Better Thermostat de divisão.",
+      "notify_not_found": "Serviço de notificação não encontrado."
+    },
+    "abort": {
+      "better_thermostat_missing": "O Better Thermostat não está instalado. Instala-o pelo HACS e configura primeiro as divisões (ver documentação).",
+      "single_instance_allowed": "O Aquecimento Ninjas já está configurado."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Aquecimento Ninjas",
+        "menu_options": {
+          "presence": "Presença e notificações",
+          "boiler": "Caldeira",
+          "rooms": "Divisões",
+          "dashboard": "Painel"
+        }
+      },
+      "boiler": {
+        "title": "Caldeira",
+        "data": {
+          "boiler_climate": "Termóstato existente da caldeira",
+          "boiler_switch": "Interruptor da caldeira (relé)",
+          "cold_tolerance": "Tolerância a frio",
+          "hot_tolerance": "Tolerância a quente",
+          "min_cycle": "Duração mínima do ciclo"
+        }
+      },
+      "room": {
+        "title": "Divisão {room_number}",
+        "description": "Válvulas usadas: {valves_used} de {valves_max}. As divisões são configuradas de novo a partir da primeira; os valores vêm preenchidos.",
+        "data": {
+          "room_name": "Nome da divisão",
+          "climate": "Better Thermostat da divisão",
+          "valves": "Válvulas de radiador (TRV) da divisão",
+          "sensor": "Sensor de temperatura da divisão",
+          "batteries": "Sensores de bateria das válvulas",
+          "windows": "Sensores de janela",
+          "add_another": "Adicionar outra divisão"
+        }
+      },
+      "presence": {
+        "title": "Presença e notificações",
+        "data": {
+          "persons": "Pessoas",
+          "away_delay": "Atraso do modo ausente",
+          "notify_service": "Serviço de notificação",
+          "notify_windows": "Notificar janelas abertas",
+          "notify_battery": "Notificar bateria fraca",
+          "battery_threshold": "Limite de bateria fraca"
+        }
+      },
+      "dashboard": {
+        "title": "Painel",
+        "data": {
+          "create_dashboard": "Criar painel",
+          "dashboard_title": "Título do painel",
+          "regenerate_dashboard": "Recriar o painel agora (substitui alterações manuais)"
+        }
+      }
+    },
+    "error": {
+      "too_many_valves": "Máximo de 5 válvulas no total.",
+      "no_valves": "Seleciona pelo menos uma válvula.",
+      "valve_in_use": "Esta válvula já está noutra divisão.",
+      "duplicate_room": "Já existe uma divisão com este nome.",
+      "climate_in_use": "Este Better Thermostat já está noutra divisão.",
+      "not_better_thermostat": "Seleciona uma entidade climate do Better Thermostat.",
+      "boiler_is_room": "O termóstato da caldeira não pode ser um Better Thermostat de divisão.",
+      "notify_not_found": "Serviço de notificação não encontrado."
+    }
+  },
+  "selector": {
+    "boiler_mode": {
+      "options": {
+        "existing": "Usar um termóstato existente",
+        "create": "Criar um termóstato para a caldeira"
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "master": { "name": "Aquecimento ligado" },
+      "away": { "name": "Modo ausente" },
+      "use_for_boiler": { "name": "{room} usar na caldeira" }
+    },
+    "select": {
+      "mode": {
+        "name": "Modo",
+        "state": { "eco": "Eco", "comfort": "Conforto" }
+      }
+    },
+    "number": {
+      "away_temperature": { "name": "Temperatura ausente" },
+      "comfort": { "name": "{room} conforto" },
+      "eco": { "name": "{room} eco" }
+    },
+    "sensor": {
+      "reference_temperature": { "name": "Temperatura de referência" },
+      "average_temperature": { "name": "Temperatura média" },
+      "minimum_temperature": { "name": "Temperatura mínima" },
+      "maximum_temperature": { "name": "Temperatura máxima" },
+      "temperature_spread": { "name": "Diferença mais quente ↔ mais fria" },
+      "boiler_on_time": { "name": "Caldeira ligada hoje" },
+      "boiler_cycles": { "name": "Ciclos da caldeira hoje" },
+      "boiler_average_cycle": { "name": "Duração média do ciclo" }
+    },
+    "climate": {
+      "boiler": { "name": "Caldeira" }
+    }
+  },
+  "services": {
+    "create_dashboard": {
+      "name": "Recriar painel",
+      "description": "Recria o painel do Aquecimento Ninjas com a configuração atual. Alterações manuais são substituídas."
+    }
+  }
+}
