@@ -76,6 +76,28 @@ Install the cards **before** creating the dashboard, or recreate it afterwards (
 ### Manual
 Copy `custom_components/aquecimento_ninjas` to `/config/custom_components/` and restart.
 
+### Already using the YAML version (packages + automations)? Remove it first
+The integration does everything the YAML version did. If both stay active, **they control the same TRVs and the boiler at the same time** (temperatures changing on their own, boost restored twice, boiler switching outside the schedule). The integration's entities also get a `_2` suffix because the IDs are already taken.
+
+Make a **backup** (*Settings → System → Backups*) and, **before** adding the integration, remove:
+
+| Where | What to remove |
+|---|---|
+| `/config/packages/heating.yaml` | The whole file (`input_number`, `input_boolean`, `input_select.aquecimento_modo`, `group.aquecimento_pessoas`, template sensors `aquecimento_*` and `caldeira_*`) |
+| `/config/packages/aquecimento_boost_package.yaml` (or `aquecimento_boost.yaml`) | The whole file (includes the `aquecimento_boost_iniciar/parar` scripts, `timer.aquecimento_boost` and the `aquecimento_boost_fim` and `aquecimento_boost_guarda` automations) |
+| `/config/automations.yaml` | The automations `aquecimento_aplicar_horarios`, `aquecimento_valvula_para_slider`, `aquecimento_presenca`, `aquecimento_modo_ausente`, `aquecimento_interruptor_geral`, `aquecimento_janela_aberta`, `aquecimento_bateria_fraca` (or delete them in *Settings → Automations*) |
+| `/config/scripts.yaml` | The `aquecimento_configurar_valvulas` script |
+| `/config/dashboards/aquecimento.yaml` and the *Aquecimento* dashboard | The old dashboard (*Settings → Dashboards*). The integration creates a new one |
+| Scheduler schedules | Schedules that change `input_select.aquecimento_modo`. Recreate them afterwards for the integration's **Mode** select |
+
+The **boiler thermostat** (`generic_thermostat` `climate` in `configuration.yaml`) has two options:
+- **Keep** it and choose *use existing* in the wizard. Then change its `target_sensor` to the integration's **Reference temperature** sensor (see [below](#using-an-existing-boiler-thermostat)).
+- **Remove** the block and choose *create* in the wizard, with the same relay (e.g. `switch.kitchen_caldeira`).
+
+**Do not remove:** Better Thermostat, the TRVs, the room sensors, Zigbee2MQTT or other packages (e.g. `luzes.yaml`). If the `packages` folder still has other files, keep the `packages: !include_dir_named packages` line.
+
+Then: *Developer tools → Check configuration* → **restart** → in *Settings → Entities* delete the old `aquecimento_*` / `caldeira_*` entities shown as *unavailable* → only then add the integration.
+
 ## 3. Setup wizard
 
 **Settings → Devices & services → Add integration → Aquecimento Ninjas**

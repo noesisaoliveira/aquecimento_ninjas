@@ -76,6 +76,28 @@ Instala os cartões **antes** de criar o painel, ou recria-o depois (*Configurar
 ### Manual
 Copia `custom_components/aquecimento_ninjas` para `/config/custom_components/` e reinicia.
 
+### Já usas a versão YAML (packages + automações)? Remove-a primeiro
+A integração faz tudo o que a versão YAML fazia. Se as duas ficarem ativas, **controlam as mesmas válvulas e a caldeira ao mesmo tempo** (temperaturas a mudar sozinhas, boost restaurado duas vezes, caldeira a ligar/desligar fora de horas). Além disso, as entidades da integração ganham o sufixo `_2` porque os IDs já estão ocupados.
+
+Faz uma **cópia de segurança** (*Definições → Sistema → Cópias de segurança*) e, **antes** de adicionar a integração, remove:
+
+| Onde | O que remover |
+|---|---|
+| `/config/packages/heating.yaml` | O ficheiro inteiro (`input_number`, `input_boolean`, `input_select.aquecimento_modo`, `group.aquecimento_pessoas`, sensores template `aquecimento_*` e `caldeira_*`) |
+| `/config/packages/aquecimento_boost_package.yaml` (ou `aquecimento_boost.yaml`) | O ficheiro inteiro (inclui os scripts `aquecimento_boost_iniciar/parar`, o `timer.aquecimento_boost` e as automações `aquecimento_boost_fim` e `aquecimento_boost_guarda`) |
+| `/config/automations.yaml` | As automações `aquecimento_aplicar_horarios`, `aquecimento_valvula_para_slider`, `aquecimento_presenca`, `aquecimento_modo_ausente`, `aquecimento_interruptor_geral`, `aquecimento_janela_aberta`, `aquecimento_bateria_fraca` (ou apaga-as em *Definições → Automações*) |
+| `/config/scripts.yaml` | O script `aquecimento_configurar_valvulas` |
+| `/config/dashboards/aquecimento.yaml` e o painel *Aquecimento* | O painel antigo (*Definições → Painéis*). A integração cria um novo |
+| Horários do Scheduler | Os horários que mudam `input_select.aquecimento_modo`. Recria-os depois para o seletor **Modo** da integração |
+
+O **termóstato da caldeira** (`climate` `generic_thermostat` no `configuration.yaml`) tem duas opções:
+- **Manter** e escolher *usar existente* no assistente. Nesse caso muda o `target_sensor` para o sensor **Temperatura de referência** da integração (ver [abaixo](#usar-um-termóstato-de-caldeira-existente)).
+- **Remover** o bloco e escolher *criar* no assistente, com o mesmo relé (ex.: `switch.kitchen_caldeira`).
+
+**Não removas:** o Better Thermostat, as válvulas, os sensores das divisões, o Zigbee2MQTT nem os outros packages (ex.: `luzes.yaml`). Se a pasta `packages` ficar só com outros ficheiros, mantém a linha `packages: !include_dir_named packages`.
+
+Depois: *Ferramentas de programador → Verificar configuração* → **reiniciar** → em *Definições → Entidades* apaga as entidades antigas `aquecimento_*` / `caldeira_*` que aparecem como *indisponíveis* → só então adiciona a integração.
+
 ## 3. Assistente de configuração
 
 **Definições → Dispositivos e serviços → Adicionar integração → Aquecimento Ninjas**
