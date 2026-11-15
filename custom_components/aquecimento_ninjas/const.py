@@ -5,10 +5,11 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "aquecimento_ninjas"
-VERSION = "1.0.1"
+VERSION = "1.2.0"
 DOCS_URL = "https://github.com/noesisaoliveira/aquecimento_ninjas"
 
 PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
     Platform.SWITCH,
     Platform.SELECT,
     Platform.NUMBER,
@@ -45,7 +46,12 @@ CONF_BATTERY_THRESHOLD = "battery_threshold"
 
 CONF_CREATE_DASHBOARD = "create_dashboard"
 CONF_DASHBOARD_TITLE = "dashboard_title"
+CONF_DASHBOARD_STYLE = "dashboard_style"
 CONF_REGENERATE_DASHBOARD = "regenerate_dashboard"
+
+STYLE_AUTO = "auto"
+STYLE_ENHANCED = "enhanced"
+STYLE_STANDARD = "standard"
 
 BOILER_EXISTING = "existing"
 BOILER_CREATE = "create"
@@ -63,6 +69,8 @@ DEFAULT_MIN_CYCLE = 5
 DEFAULT_AWAY_DELAY = 30
 DEFAULT_BATTERY_THRESHOLD = 20
 DEFAULT_BOILER_TARGET = 20.0
+DEFAULT_BOOST_HOURS = 1.0
+DEFAULT_BOOST_TEMPERATURE = 23.0
 
 MIN_TEMP = 5.0
 MAX_TEMP = 30.0
@@ -75,5 +83,23 @@ APPLY_INTERVAL_MINUTES = 30
 SUPPRESS_SECONDS = 10
 MASTER_SETTLE_SECONDS = 5
 
+# Verified commands: check the thermostat accepted it, resend otherwise.
+VERIFY_SECONDS = 90
+MAX_RETRIES = 3
+
+# Windows: contact debounce, and open window detected from a fast temperature drop.
+WINDOW_CONTACT_SECONDS = 10
+WINDOW_DROP_DEGREES = 1.0
+WINDOW_DROP_MINUTES = 5
+WINDOW_MIN_PAUSE_MINUTES = 15
+WINDOW_MAX_PAUSE_MINUTES = 60
+
+# Diagnostics
+SENSOR_STALE_HOURS = 3
+NOT_HEATING_DELTA = 1.0
+NOT_HEATING_HOURS = 2
+
 SIGNAL_TEMPERATURES = f"{DOMAIN}_temperatures"
 SIGNAL_STATS = f"{DOMAIN}_stats"
+SIGNAL_BOOST = f"{DOMAIN}_boost"
+SIGNAL_DIAGNOSTICS = f"{DOMAIN}_diagnostics"

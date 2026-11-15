@@ -58,6 +58,7 @@ async def async_setup_entry(
             BoilerOnTimeSensor(c),
             BoilerCyclesSensor(c),
             BoilerAverageCycleSensor(c),
+            BoostEndSensor(c),
         ]
     )
 
@@ -199,3 +200,25 @@ class BoilerAverageCycleSensor(_StatsBase):
 
     def _value(self) -> float:
         return self.controller.stats.average_cycle_minutes
+
+
+class BoostEndSensor(AquecimentoEntity, SensorEntity):
+    """When the running boost ends (unknown when no boost)."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:timer-sand"
+
+    def __init__(self, controller: HeatingController) -> None:
+        super().__init__(controller, "boost_end")
+
+    @property
+    def native_value(self) -> Any:
+        return self.controller.boost_until
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, self.controller.signal_boost, self.async_write_ha_state
+            )
+        )

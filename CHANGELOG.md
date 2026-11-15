@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.2.0 – 2026-11-15
+
+- **Open window pause/resume** for any valve: contact sensors (10 s debounce) or a fast temperature drop
+  (≥ 1 °C in 5 min). New entities: `<room> window open`, switch *Window detection by temperature drop*.
+- **Verified commands**: room thermostat commands are checked after 90 s and resent up to 3 times.
+- **Emergency mode** when a room sensor is unavailable or silent for 3 h: room at eco temperature, left out of the
+  boiler reference; the created boiler thermostat turns the boiler off without a valid reference.
+- **Diagnostics**: `<room> sensor problem`, `<room> not heating` (≥ 1 °C below target for 2 h), notifications,
+  and *Download diagnostics*.
+- Dashboard: Diagnostics card (Standard) and Maintenance view always present (Enhanced).
+
+After updating, recreate the dashboard: *Configure → Dashboard → Recreate*.
+
+## 1.1.0 – 2026-11-15
+
+- **Boost**: heat selected rooms to a boost temperature for 30 min–6 h, other rooms off, previous state restored at the end.
+  New entities: Boost switch, Boost ends sensor, Boost duration/temperature, per-room boost switches.
+  New actions: `aquecimento_ninjas.start_boost`, `aquecimento_ninjas.stop_boost`.
+- **Enhanced dashboard** (Mushroom): views Heating, Schedule (Scheduler card), Maintenance and Charts
+  (ApexCharts and mini-graph when installed). New option *Dashboard style*: Automatic / Enhanced / Standard.
+- Standard dashboard now also shows the Boost.
+
+After updating, recreate the dashboard: *Configure → Dashboard → Recreate*.
+
 ## 1.0.1 – 2026-11-09
 
 - Integration icon (`brand/icon.png`, `brand/icon@2x.png`) for Home Assistant and the HACS Marketplace.

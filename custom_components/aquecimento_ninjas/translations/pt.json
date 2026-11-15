@@ -69,7 +69,11 @@
         "description": "Cria um painel com as vistas Aquecimento e Gráficos.",
         "data": {
           "create_dashboard": "Criar painel",
-          "dashboard_title": "Título do painel"
+          "dashboard_title": "Título do painel",
+          "dashboard_style": "Estilo do painel"
+        },
+        "data_description": {
+          "dashboard_style": "Melhorado usa cartões Mushroom (e ApexCharts, mini-graph e Scheduler quando instalados). Automático escolhe Melhorado quando o Mushroom está instalado."
         }
       }
     },
@@ -138,6 +142,7 @@
         "data": {
           "create_dashboard": "Criar painel",
           "dashboard_title": "Título do painel",
+          "dashboard_style": "Estilo do painel",
           "regenerate_dashboard": "Recriar o painel agora (substitui alterações manuais)"
         }
       }
@@ -159,12 +164,27 @@
         "existing": "Usar um termóstato existente",
         "create": "Criar um termóstato para a caldeira"
       }
+    },
+    "dashboard_style": {
+      "options": {
+        "auto": "Automático",
+        "enhanced": "Melhorado (cartões Mushroom)",
+        "standard": "Padrão (só cartões do Home Assistant)"
+      }
     }
   },
   "entity": {
+    "binary_sensor": {
+      "window_open": { "name": "{room} janela aberta" },
+      "sensor_problem": { "name": "{room} problema no sensor" },
+      "not_heating": { "name": "{room} não aquece" }
+    },
     "switch": {
       "master": { "name": "Aquecimento ligado" },
       "away": { "name": "Modo ausente" },
+      "boost": { "name": "Boost" },
+      "boost_room": { "name": "{room} boost" },
+      "window_temperature_detection": { "name": "Detetar janela pela queda de temperatura" },
       "use_for_boiler": { "name": "{room} usar na caldeira" }
     },
     "select": {
@@ -175,6 +195,8 @@
     },
     "number": {
       "away_temperature": { "name": "Temperatura ausente" },
+      "boost_hours": { "name": "Duração do boost" },
+      "boost_temperature": { "name": "Temperatura do boost" },
       "comfort": { "name": "{room} conforto" },
       "eco": { "name": "{room} eco" }
     },
@@ -186,7 +208,8 @@
       "temperature_spread": { "name": "Diferença mais quente ↔ mais fria" },
       "boiler_on_time": { "name": "Caldeira ligada hoje" },
       "boiler_cycles": { "name": "Ciclos da caldeira hoje" },
-      "boiler_average_cycle": { "name": "Duração média do ciclo" }
+      "boiler_average_cycle": { "name": "Duração média do ciclo" },
+      "boost_end": { "name": "Fim do boost" }
     },
     "climate": {
       "boiler": { "name": "Caldeira" }
@@ -196,6 +219,21 @@
     "create_dashboard": {
       "name": "Recriar painel",
       "description": "Recria o painel do Aquecimento Ninjas com a configuração atual. Alterações manuais são substituídas."
+    },
+    "start_boost": {
+      "name": "Iniciar boost",
+      "description": "Aquece só as divisões selecionadas para o boost até à temperatura de boost; as outras são desligadas. No fim tudo é reposto.",
+      "fields": {
+        "hours": { "name": "Duração", "description": "Horas. Por omissão: a definição Duração do boost." },
+        "temperature": { "name": "Temperatura", "description": "Por omissão: a definição Temperatura do boost." }
+      }
+    },
+    "stop_boost": {
+      "name": "Parar boost",
+      "description": "Termina o boost e repõe o estado anterior."
     }
+  },
+  "exceptions": {
+    "boost_no_rooms": { "message": "Seleciona pelo menos uma divisão para o boost." }
   }
 }

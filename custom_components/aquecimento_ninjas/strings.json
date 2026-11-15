@@ -69,7 +69,11 @@
         "description": "Creates a dashboard with the views Heating and Charts.",
         "data": {
           "create_dashboard": "Create dashboard",
-          "dashboard_title": "Dashboard title"
+          "dashboard_title": "Dashboard title",
+          "dashboard_style": "Dashboard style"
+        },
+        "data_description": {
+          "dashboard_style": "Enhanced uses Mushroom cards (and ApexCharts, mini-graph and Scheduler cards when installed). Automatic picks Enhanced when Mushroom is installed."
         }
       }
     },
@@ -138,6 +142,7 @@
         "data": {
           "create_dashboard": "Create dashboard",
           "dashboard_title": "Dashboard title",
+          "dashboard_style": "Dashboard style",
           "regenerate_dashboard": "Recreate the dashboard now (overwrites manual edits)"
         }
       }
@@ -159,12 +164,27 @@
         "existing": "Use an existing thermostat",
         "create": "Create a boiler thermostat"
       }
+    },
+    "dashboard_style": {
+      "options": {
+        "auto": "Automatic",
+        "enhanced": "Enhanced (Mushroom cards)",
+        "standard": "Standard (built-in cards only)"
+      }
     }
   },
   "entity": {
+    "binary_sensor": {
+      "window_open": { "name": "{room} window open" },
+      "sensor_problem": { "name": "{room} sensor problem" },
+      "not_heating": { "name": "{room} not heating" }
+    },
     "switch": {
       "master": { "name": "Heating on" },
       "away": { "name": "Away mode" },
+      "boost": { "name": "Boost" },
+      "boost_room": { "name": "{room} boost" },
+      "window_temperature_detection": { "name": "Window detection by temperature drop" },
       "use_for_boiler": { "name": "{room} use for boiler" }
     },
     "select": {
@@ -175,6 +195,8 @@
     },
     "number": {
       "away_temperature": { "name": "Away temperature" },
+      "boost_hours": { "name": "Boost duration" },
+      "boost_temperature": { "name": "Boost temperature" },
       "comfort": { "name": "{room} comfort" },
       "eco": { "name": "{room} eco" }
     },
@@ -186,7 +208,8 @@
       "temperature_spread": { "name": "Warmest to coldest room" },
       "boiler_on_time": { "name": "Boiler on today" },
       "boiler_cycles": { "name": "Boiler cycles today" },
-      "boiler_average_cycle": { "name": "Boiler average cycle" }
+      "boiler_average_cycle": { "name": "Boiler average cycle" },
+      "boost_end": { "name": "Boost ends" }
     },
     "climate": {
       "boiler": { "name": "Boiler" }
@@ -196,6 +219,21 @@
     "create_dashboard": {
       "name": "Recreate dashboard",
       "description": "Recreates the Aquecimento Ninjas dashboard from the current configuration. Manual edits are overwritten."
+    },
+    "start_boost": {
+      "name": "Start boost",
+      "description": "Heats only the rooms selected for boost to the boost temperature; the other rooms are turned off. Everything is restored when it ends.",
+      "fields": {
+        "hours": { "name": "Duration", "description": "Hours. Default: the Boost duration setting." },
+        "temperature": { "name": "Temperature", "description": "Default: the Boost temperature setting." }
+      }
+    },
+    "stop_boost": {
+      "name": "Stop boost",
+      "description": "Ends the boost and restores the previous state."
     }
+  },
+  "exceptions": {
+    "boost_no_rooms": { "message": "Select at least one room for the boost." }
   }
 }

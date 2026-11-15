@@ -34,6 +34,7 @@ from .const import (
     CONF_BOILER_SWITCH,
     CONF_COLD_TOLERANCE,
     CONF_CREATE_DASHBOARD,
+    CONF_DASHBOARD_STYLE,
     CONF_DASHBOARD_TITLE,
     CONF_HOT_TOLERANCE,
     CONF_MIN_CYCLE,
@@ -58,6 +59,9 @@ from .const import (
     DEFAULT_NAME,
     DOMAIN,
     MAX_VALVES,
+    STYLE_AUTO,
+    STYLE_ENHANCED,
+    STYLE_STANDARD,
 )
 
 
@@ -210,6 +214,15 @@ def _dashboard_schema(defaults: dict[str, Any], with_regenerate: bool) -> vol.Sc
             CONF_DASHBOARD_TITLE,
             default=defaults.get(CONF_DASHBOARD_TITLE, defaults.get(CONF_NAME, DEFAULT_NAME)),
         ): str,
+        vol.Required(
+            CONF_DASHBOARD_STYLE, default=defaults.get(CONF_DASHBOARD_STYLE, STYLE_AUTO)
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[STYLE_AUTO, STYLE_ENHANCED, STYLE_STANDARD],
+                translation_key=CONF_DASHBOARD_STYLE,
+                mode=selector.SelectSelectorMode.LIST,
+            )
+        ),
     }
     if with_regenerate:
         schema[vol.Required(CONF_REGENERATE_DASHBOARD, default=False)] = bool

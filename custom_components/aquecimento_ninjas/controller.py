@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from functools import partial
 import logging
 import time
 from typing import TYPE_CHECKING, Any
@@ -20,10 +22,11 @@ from homeassistant.core import (
     State,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_call_later,
+    async_track_point_in_utc_time,
     async_track_state_change_event,
     async_track_time_change,
     async_track_time_interval,
@@ -53,20 +56,33 @@ from .const import (
     CONF_ROOMS,
     DEFAULT_AWAY_DELAY,
     DEFAULT_BATTERY_THRESHOLD,
+    DOMAIN,
     MASTER_SETTLE_SECONDS,
+    MAX_RETRIES,
     MAX_TEMP,
     MIN_TEMP,
     MODE_COMFORT,
+    NOT_HEATING_DELTA,
+    NOT_HEATING_HOURS,
+    SENSOR_STALE_HOURS,
+    SIGNAL_BOOST,
+    SIGNAL_DIAGNOSTICS,
     SIGNAL_STATS,
     SIGNAL_TEMPERATURES,
     SUPPRESS_SECONDS,
+    VERIFY_SECONDS,
+    WINDOW_CONTACT_SECONDS,
+    WINDOW_DROP_DEGREES,
+    WINDOW_DROP_MINUTES,
+    WINDOW_MAX_PAUSE_MINUTES,
+    WINDOW_MIN_PAUSE_MINUTES,
 )
 
 if TYPE_CHECKING:
     from .climate import BoilerThermostat
-    from .number import TemperatureNumber
+    from .number import HelperNumber
     from .select import ModeSelect
-    from .switch import AquecimentoSwitch
+    from .switch import AquecimentoSwitch, BoostSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,15 +91,23 @@ _INVALID = (STATE_UNAVAILABLE, STATE_UNKNOWN)
 _MESSAGES = {
     "en": {
         "window_title": "Heating",
-        "window": "Window open in {room}. Heating paused on that valve.",
+        "window": "Window open in {room}. Heating paused in that room.",
+        "window_drop": "Temperature dropping fast in {room} (open window?). Heating paused.",
         "battery_title": "Heating - battery",
         "battery_low": "Low battery: {names}",
+        "problem_title": "Heating - problem",
+        "sensor_failed": "{room}: room sensor not reporting. Emergency mode: eco temperature.",
+        "not_heating": "{room} is not reaching its target temperature for {hours} h.",
     },
     "pt": {
         "window_title": "Aquecimento",
-        "window": "Janela aberta em {room}. Aquecimento em pausa nessa válvula.",
+        "window": "Janela aberta em {room}. Aquecimento em pausa nessa divisão.",
+        "window_drop": "A temperatura está a descer depressa em {room} (janela aberta?). Aquecimento em pausa.",
         "battery_title": "Aquecimento - bateria",
         "battery_low": "Bateria fraca: {names}",
+        "problem_title": "Aquecimento - problema",
+        "sensor_failed": "{room}: o sensor da divisão não está a enviar dados. Modo de emergência: temperatura eco.",
+        "not_heating": "{room} não chega à temperatura pretendida há {hours} h.",
     },
 }
 
@@ -112,6 +136,30 @@ class Room:
     valves: list[str] = field(default_factory=list)
     batteries: list[str] = field(default_factory=list)
     windows: list[str] = field(default_factory=list)
+
+
+@dataclass
+class RoomRuntime:
+    """Live state of a room: pending command, window pause and diagnostics."""
+
+    readings: deque[tuple[datetime, float]] = field(default_factory=lambda: deque(maxlen=120))
+    desired: dict[str, Any] | None = None
+    verify_unsub: CALLBACK_TYPE | None = None
+    command_failures: int = 0
+    paused: bool = False
+    pause_reason: str | None = None
+    paused_since: datetime | None = None
+    contact_unsub: CALLBACK_TYPE | None = None
+    sensor_failed: bool = False
+    sensor_age_hours: float | None = None
+    not_heating: bool = False
+    not_heating_since: datetime | None = None
+
+    def cancel_timers(self) -> None:
+        for unsub in (self.verify_unsub, self.contact_unsub):
+            if unsub:
+                unsub()
+        self.verify_unsub = self.contact_unsub = None
 
 
 class BoilerStats:
@@ -178,15 +226,25 @@ class HeatingController:
         ]
         self.lang = "pt" if (hass.config.language or "").startswith("pt") else "en"
         self.unique_ids: set[str] = set()
+        self.runtime: dict[str, RoomRuntime] = {r.id: RoomRuntime() for r in self.rooms}
+        self.window_temperature_detection: AquecimentoSwitch | None = None
 
         self.master: AquecimentoSwitch | None = None
         self.away: AquecimentoSwitch | None = None
         self.mode: ModeSelect | None = None
-        self.away_temperature: TemperatureNumber | None = None
-        self.comfort: dict[str, TemperatureNumber] = {}
-        self.eco: dict[str, TemperatureNumber] = {}
+        self.away_temperature: HelperNumber | None = None
+        self.comfort: dict[str, HelperNumber] = {}
+        self.eco: dict[str, HelperNumber] = {}
         self.use_for_boiler: dict[str, AquecimentoSwitch] = {}
         self.boiler_entity: BoilerThermostat | None = None
+
+        self.boost_hours: HelperNumber | None = None
+        self.boost_temperature: HelperNumber | None = None
+        self.boost_rooms: dict[str, AquecimentoSwitch] = {}
+        self.boost_switch: BoostSwitch | None = None
+        self.boost_until: datetime | None = None
+        self._boost_snapshot: dict[str, Any] | None = None
+        self._boost_timer: CALLBACK_TYPE | None = None
 
         self.stats = BoilerStats()
         self._lock = asyncio.Lock()
@@ -206,6 +264,22 @@ class HeatingController:
     @property
     def signal_stats(self) -> str:
         return f"{SIGNAL_STATS}_{self.entry.entry_id}"
+
+    @property
+    def signal_boost(self) -> str:
+        return f"{SIGNAL_BOOST}_{self.entry.entry_id}"
+
+    @property
+    def signal_diagnostics(self) -> str:
+        return f"{SIGNAL_DIAGNOSTICS}_{self.entry.entry_id}"
+
+    @property
+    def boost_active(self) -> bool:
+        return self.boost_until is not None
+
+    def boost_selected(self, room: Room) -> bool:
+        switch = self.boost_rooms.get(room.id)
+        return bool(switch and switch.is_on)
 
     @property
     def creates_boiler(self) -> bool:
@@ -243,6 +317,8 @@ class HeatingController:
     # ---------- temperatures ----------
 
     def room_temperature(self, room: Room) -> float | None:
+        if self.runtime[room.id].sensor_failed:
+            return None
         return _state_float(self.hass.states.get(room.sensor))
 
     def room_temperatures(self) -> list[float]:
@@ -283,10 +359,12 @@ class HeatingController:
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
-        for timer in (self._away_timer, self._settle_timer):
+        for timer in (self._away_timer, self._settle_timer, self._boost_timer):
             if timer:
                 timer()
-        self._away_timer = self._settle_timer = None
+        self._away_timer = self._settle_timer = self._boost_timer = None
+        for rt in self.runtime.values():
+            rt.cancel_timers()
 
     async def _async_on_started(self, hass: HomeAssistant) -> None:
         track = self._unsubs.append
@@ -317,6 +395,15 @@ class HeatingController:
             track(async_track_state_change_event(hass, [source], self._on_stats_source))
         track(async_track_time_change(hass, self._midnight, hour=0, minute=0, second=0))
         track(async_track_time_interval(hass, self._stats_tick, timedelta(minutes=1)))
+        track(async_track_time_interval(hass, self._diagnostics_tick, timedelta(minutes=1)))
+
+        now = dt_util.utcnow()
+        for room in self.rooms:
+            if (value := _state_float(hass.states.get(room.sensor))) is not None:
+                self.runtime[room.id].readings.append((now, value))
+            if any(hass.states.is_state(w, STATE_ON) for w in room.windows):
+                self._schedule_contact_check(room)
+        self._diagnostics_tick(now)
 
         track(
             async_track_time_interval(
@@ -327,6 +414,13 @@ class HeatingController:
         self._was_home = self._anyone_home() if self.persons else None
         if self._was_home is False:
             self._start_away_timer()
+
+        if self.boost_until is not None:
+            if self.boost_until <= dt_util.utcnow():
+                await self.async_stop_boost()
+            else:
+                self._schedule_boost_end()
+            return
 
         await self.async_master_changed()
 
@@ -364,7 +458,9 @@ class HeatingController:
         self.request_apply()
 
     def _room_target(self, room: Room) -> float | None:
-        number = (self.comfort if self.comfort_mode else self.eco).get(room.id)
+        # Emergency mode: without a trustworthy room sensor keep the room at eco.
+        use_eco = not self.comfort_mode or self.runtime[room.id].sensor_failed
+        number = (self.eco if use_eco else self.comfort).get(room.id)
         return number.native_value if number else None
 
     def _away_target(self, room: Room) -> float | None:
@@ -373,11 +469,12 @@ class HeatingController:
     async def async_apply(self) -> None:
         """Send the right target temperature to every room thermostat."""
         async with self._lock:
-            if not self.master_on:
+            if not self.master_on or self.boost_active:
                 return
             target_fn = self._away_target if self.away_on else self._room_target
             for room in self.rooms:
-                await self._apply_room(room, target_fn(room))
+                if not self.runtime[room.id].paused:
+                    await self._apply_room(room, target_fn(room))
 
     async def _apply_room(self, room: Room, target: float | None) -> None:
         state = self.hass.states.get(room.climate)
@@ -385,8 +482,6 @@ class HeatingController:
             return
         self._mark_own_change()
         attrs = state.attributes
-        if state.state == HVACMode.OFF:
-            await self._call("climate", "set_hvac_mode", room.climate, hvac_mode=HVACMode.HEAT)
         preset = attrs.get("preset_mode")
         if preset not in (None, "none") and "none" in (attrs.get("preset_modes") or []):
             await self._call("climate", "set_preset_mode", room.climate, preset_mode="none")
@@ -399,18 +494,21 @@ class HeatingController:
                     room.climate,
                 )
             return
-        if _as_float(attrs.get("temperature")) != target:
-            await self._call("climate", "set_temperature", room.climate, temperature=target)
+        if state.state != HVACMode.HEAT or _as_float(attrs.get("temperature")) != target:
+            await self._send(room, HVACMode.HEAT, target)
 
     async def async_master_changed(self) -> None:
         """Master switch: heat or off for boiler and every room."""
+        if not self.master_on and self.boost_active:
+            await self.async_stop_boost(restore=False)
         mode = HVACMode.HEAT if self.master_on else HVACMode.OFF
         self._mark_own_change()
         await self._set_boiler_mode(mode)
         for room in self.rooms:
+            room_mode = HVACMode.OFF if self.runtime[room.id].paused else mode
             state = self.hass.states.get(room.climate)
-            if state is not None and state.state not in _INVALID and state.state != mode:
-                await self._call("climate", "set_hvac_mode", room.climate, hvac_mode=mode)
+            if state is not None and state.state not in _INVALID and state.state != room_mode:
+                await self._send(room, room_mode, None)
         if self._settle_timer:
             self._settle_timer()
             self._settle_timer = None
@@ -437,6 +535,15 @@ class HeatingController:
 
     @callback
     def _on_room_sensor(self, event: Event[EventStateChangedData]) -> None:
+        room = next((r for r in self.rooms if r.sensor == event.data["entity_id"]), None)
+        value = _state_float(event.data["new_state"])
+        if room is not None and value is not None:
+            rt = self.runtime[room.id]
+            now = dt_util.utcnow()
+            rt.readings.append((now, value))
+            if rt.sensor_failed:
+                self._diagnostics_tick(now)
+            self._check_temperature_drop(room, now, value)
         self.notify_temperatures()
 
     @callback
@@ -452,8 +559,15 @@ class HeatingController:
                 )
             return
         room = self.room_by_climate(entity_id)
-        if room is not None and old is not None:
-            self._sync_slider(room, old, new)
+        if room is None or old is None or self.runtime[room.id].paused:
+            return
+        if self.boost_active:
+            if not self.boost_selected(room) and new.state not in (HVACMode.OFF, *_INVALID):
+                self.hass.async_create_task(
+                    self._call("climate", "set_hvac_mode", entity_id, hvac_mode=HVACMode.OFF)
+                )
+            return
+        self._sync_slider(room, old, new)
 
     def _sync_slider(self, room: Room, old: State, new: State) -> None:
         """A target changed on the room thermostat becomes the new comfort/eco value."""
@@ -469,6 +583,126 @@ class HeatingController:
         value = min(max(new_t, MIN_TEMP), MAX_TEMP)
         if number is not None and number.native_value != value:
             self.hass.async_create_task(number.async_set_native_value(value))
+
+    # ---------- boost ----------
+
+    def _climate_snapshot(self, entity_id: str | None) -> dict[str, Any] | None:
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if state is None or state.state in _INVALID:
+            return None
+        return {"state": state.state, "temperature": _as_float(state.attributes.get("temperature"))}
+
+    async def _set_climate(self, entity_id: str, mode: str, temperature: float | None) -> None:
+        if (room := self.room_by_climate(entity_id)) is not None:
+            if self.runtime[room.id].paused:
+                mode, temperature = HVACMode.OFF, None
+            await self._send(room, mode, temperature)
+            return
+        if self.boiler_entity is not None and entity_id == self.boiler_climate_id:
+            await self.boiler_entity.async_set_hvac_mode(HVACMode(mode))
+            if temperature is not None:
+                await self.boiler_entity.async_set_temperature(temperature=temperature)
+            return
+        await self._call("climate", "set_hvac_mode", entity_id, hvac_mode=mode)
+        if temperature is not None and mode != HVACMode.OFF:
+            await self._call("climate", "set_temperature", entity_id, temperature=temperature)
+
+    def _set_switch_silently(self, switch: AquecimentoSwitch | None, value: bool) -> None:
+        if switch is not None and switch.is_on != value:
+            switch.set_state_silently(value)
+
+    async def async_start_boost(
+        self, hours: float | None = None, temperature: float | None = None
+    ) -> None:
+        """Heat only the selected rooms to a boost temperature for a while."""
+        selected = [r for r in self.rooms if self.boost_selected(r)]
+        if not selected:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="boost_no_rooms"
+            )
+        hours = float(hours if hours is not None else self._number(self.boost_hours, 1))
+        target = float(
+            temperature if temperature is not None else self._number(self.boost_temperature, 23)
+        )
+
+        if not self.boost_active:
+            self._boost_snapshot = {
+                "master": self.master_on,
+                "refs": {rid: s.is_on for rid, s in self.use_for_boiler.items()},
+                "rooms": {r.climate: self._climate_snapshot(r.climate) for r in self.rooms},
+                "boiler": self._climate_snapshot(self.boiler_climate_id),
+            }
+        self.boost_until = dt_util.utcnow() + timedelta(hours=hours)
+        self._schedule_boost_end()
+        self._mark_own_change()
+
+        self._set_switch_silently(self.master, True)
+        for room in self.rooms:
+            self._set_switch_silently(self.use_for_boiler.get(room.id), self.boost_selected(room))
+        self.notify_temperatures()
+
+        for room in self.rooms:
+            if self.boost_selected(room):
+                await self._set_climate(room.climate, HVACMode.HEAT, target)
+            else:
+                await self._set_climate(room.climate, HVACMode.OFF, None)
+        if self.boiler_climate_id:
+            await self._set_climate(self.boiler_climate_id, HVACMode.HEAT, target)
+        async_dispatcher_send(self.hass, self.signal_boost)
+
+    async def async_stop_boost(self, restore: bool = True) -> None:
+        """End the boost and put everything back as it was."""
+        if self._boost_timer:
+            self._boost_timer()
+            self._boost_timer = None
+        was_active = self.boost_active
+        self.boost_until = None
+        snapshot, self._boost_snapshot = self._boost_snapshot, None
+        async_dispatcher_send(self.hass, self.signal_boost)
+        if not was_active or not restore or not snapshot:
+            return
+
+        self._mark_own_change()
+        self._set_switch_silently(self.master, bool(snapshot.get("master", True)))
+        for room_id, value in (snapshot.get("refs") or {}).items():
+            self._set_switch_silently(self.use_for_boiler.get(room_id), bool(value))
+        self.notify_temperatures()
+
+        if self.boiler_climate_id and (boiler := snapshot.get("boiler")):
+            await self._set_climate(self.boiler_climate_id, boiler["state"], boiler["temperature"])
+        for climate, saved in (snapshot.get("rooms") or {}).items():
+            if saved:
+                await self._set_climate(climate, saved["state"], saved["temperature"])
+        if self.master_on:
+            self.request_apply()
+        else:
+            await self.async_master_changed()
+
+    def restore_boost(self, until: datetime | None, snapshot: dict[str, Any] | None) -> None:
+        """Called by the boost switch after a restart."""
+        self.boost_until = until
+        self._boost_snapshot = snapshot
+
+    def boost_snapshot(self) -> dict[str, Any] | None:
+        return self._boost_snapshot
+
+    def _schedule_boost_end(self) -> None:
+        if self._boost_timer:
+            self._boost_timer()
+        if self.boost_until is not None:
+            self._boost_timer = async_track_point_in_utc_time(
+                self.hass, self._boost_finished, self.boost_until
+            )
+
+    @callback
+    def _boost_finished(self, _now: datetime) -> None:
+        self._boost_timer = None
+        self.hass.async_create_task(self.async_stop_boost())
+
+    @staticmethod
+    def _number(entity: HelperNumber | None, default: float) -> float:
+        value = entity.native_value if entity else None
+        return float(value) if value is not None else default
 
     # ---------- presence ----------
 
@@ -502,20 +736,224 @@ class HeatingController:
         else:
             self._start_away_timer()
 
-    # ---------- windows and batteries ----------
+    # ---------- verified commands ----------
+
+    async def _send(self, room: Room, hvac_mode: str | None, temperature: float | None) -> None:
+        """Send a command to a room thermostat and check later that it was applied."""
+        rt = self.runtime[room.id]
+        desired = dict(rt.desired or {})
+        if hvac_mode is not None:
+            desired["hvac_mode"] = str(hvac_mode)
+        if temperature is not None:
+            desired["temperature"] = float(temperature)
+        desired["attempts"] = 0
+        rt.desired = desired
+        await self._issue(room)
+
+    async def _issue(self, room: Room) -> None:
+        rt = self.runtime[room.id]
+        desired = rt.desired
+        state = self.hass.states.get(room.climate)
+        if not desired or state is None or state.state in _INVALID:
+            return
+        self._mark_own_change()
+        mode = desired.get("hvac_mode")
+        if mode and state.state != mode:
+            await self._call("climate", "set_hvac_mode", room.climate, hvac_mode=mode)
+        target = desired.get("temperature")
+        if target is not None and mode != HVACMode.OFF:
+            if _as_float(state.attributes.get("temperature")) != target or state.state != mode:
+                await self._call("climate", "set_temperature", room.climate, temperature=target)
+        if rt.verify_unsub:
+            rt.verify_unsub()
+        rt.verify_unsub = async_call_later(
+            self.hass, VERIFY_SECONDS, partial(self._verify, room)
+        )
+
+    def _command_applied(self, room: Room) -> bool:
+        desired = self.runtime[room.id].desired or {}
+        state = self.hass.states.get(room.climate)
+        if state is None or state.state in _INVALID:
+            return False
+        mode = desired.get("hvac_mode")
+        if mode and state.state != mode:
+            return False
+        target = desired.get("temperature")
+        if target is not None and mode != HVACMode.OFF:
+            return _as_float(state.attributes.get("temperature")) == target
+        return True
+
+    @callback
+    def _verify(self, room: Room, _now: datetime) -> None:
+        rt = self.runtime[room.id]
+        rt.verify_unsub = None
+        if not rt.desired:
+            return
+        if self._command_applied(room):
+            rt.desired = None
+            return
+        rt.desired["attempts"] += 1
+        if rt.desired["attempts"] <= MAX_RETRIES:
+            _LOGGER.info(
+                "%s did not apply %s, resending (%s/%s)",
+                room.climate, rt.desired, rt.desired["attempts"], MAX_RETRIES,
+            )
+            self.hass.async_create_task(self._issue(room))
+            return
+        _LOGGER.warning("%s did not apply %s after %s retries", room.climate, rt.desired, MAX_RETRIES)
+        rt.command_failures += 1
+        rt.desired = None
+        async_dispatcher_send(self.hass, self.signal_diagnostics)
+
+    # ---------- windows: pause and resume ----------
 
     @callback
     def _on_window_change(self, event: Event[EventStateChangedData]) -> None:
-        new, old = event.data["new_state"], event.data["old_state"]
-        if not self.config.get(CONF_NOTIFY_WINDOWS, True) or new is None:
-            return
-        if new.state != STATE_ON or (old is not None and old.state == STATE_ON):
-            return
         room = next((r for r in self.rooms if event.data["entity_id"] in r.windows), None)
-        name = room.name if room else new.name
-        self.hass.async_create_task(
-            self._notify(self._msg("window_title"), self._msg("window", room=name))
+        if room is not None:
+            self._schedule_contact_check(room)
+
+    def _schedule_contact_check(self, room: Room) -> None:
+        rt = self.runtime[room.id]
+        if rt.contact_unsub:
+            rt.contact_unsub()
+        rt.contact_unsub = async_call_later(
+            self.hass, WINDOW_CONTACT_SECONDS, partial(self._contact_settled, room)
         )
+
+    @callback
+    def _contact_settled(self, room: Room, _now: datetime) -> None:
+        rt = self.runtime[room.id]
+        rt.contact_unsub = None
+        is_open = any(self.hass.states.is_state(w, STATE_ON) for w in room.windows)
+        if is_open and not rt.paused:
+            self.hass.async_create_task(self._pause_room(room, "contact"))
+        elif is_open and rt.pause_reason == "temperature":
+            rt.pause_reason = "contact"
+            async_dispatcher_send(self.hass, self.signal_diagnostics)
+        elif not is_open and rt.paused and rt.pause_reason == "contact":
+            self.hass.async_create_task(self._resume_room(room))
+
+    @property
+    def temperature_window_detection(self) -> bool:
+        switch = self.window_temperature_detection
+        return switch.is_on if switch else True
+
+    def _check_temperature_drop(self, room: Room, now: datetime, value: float) -> None:
+        rt = self.runtime[room.id]
+        if rt.paused or not self.temperature_window_detection or not self.master_on:
+            return
+        state = self.hass.states.get(room.climate)
+        if state is None or state.state != HVACMode.HEAT:
+            return
+        since = now - timedelta(minutes=WINDOW_DROP_MINUTES)
+        recent = [v for t, v in rt.readings if t >= since]
+        if recent and max(recent) - value >= WINDOW_DROP_DEGREES:
+            self.hass.async_create_task(self._pause_room(room, "temperature"))
+
+    def _temperature_window_closed(self, room: Room, now: datetime) -> bool:
+        rt = self.runtime[room.id]
+        elapsed = now - (rt.paused_since or now)
+        if elapsed >= timedelta(minutes=WINDOW_MAX_PAUSE_MINUTES):
+            return True
+        if elapsed < timedelta(minutes=WINDOW_MIN_PAUSE_MINUTES):
+            return False
+        since = now - timedelta(minutes=WINDOW_DROP_MINUTES)
+        recent = [v for t, v in rt.readings if t >= since]
+        # No longer falling: the last readings are not below the oldest recent one.
+        return len(recent) >= 2 and recent[-1] >= recent[0] - 0.1
+
+    async def _pause_room(self, room: Room, reason: str) -> None:
+        rt = self.runtime[room.id]
+        if rt.paused:
+            return
+        rt.paused, rt.pause_reason, rt.paused_since = True, reason, dt_util.utcnow()
+        async_dispatcher_send(self.hass, self.signal_diagnostics)
+        await self._send(room, HVACMode.OFF, None)
+        if self.config.get(CONF_NOTIFY_WINDOWS, True):
+            key = "window_drop" if reason == "temperature" else "window"
+            await self._notify(self._msg("window_title"), self._msg(key, room=room.name))
+
+    async def _resume_room(self, room: Room) -> None:
+        rt = self.runtime[room.id]
+        rt.paused, rt.pause_reason, rt.paused_since = False, None, None
+        async_dispatcher_send(self.hass, self.signal_diagnostics)
+        if not self.master_on:
+            return
+        if self.boost_active:
+            if self.boost_selected(room):
+                await self._send(room, HVACMode.HEAT, self._number(self.boost_temperature, 23))
+            return
+        await self._send(room, HVACMode.HEAT, None)
+        self.request_apply()
+
+    # ---------- diagnostics ----------
+
+    def _sensor_age_hours(self, state: State | None) -> float | None:
+        if state is None:
+            return None
+        last = getattr(state, "last_reported", None) or state.last_updated
+        return (dt_util.utcnow() - last).total_seconds() / 3600
+
+    @callback
+    def _diagnostics_tick(self, now: datetime) -> None:
+        now = dt_util.utcnow()
+        changed = False
+        for room in self.rooms:
+            rt = self.runtime[room.id]
+            state = self.hass.states.get(room.sensor)
+            age = self._sensor_age_hours(state)
+            rt.sensor_age_hours = round(age, 1) if age is not None else None
+            failed = _state_float(state) is None or (age is not None and age >= SENSOR_STALE_HOURS)
+            if failed != rt.sensor_failed:
+                rt.sensor_failed = failed
+                changed = True
+                self.notify_temperatures()
+                self.request_apply()
+                if failed:
+                    self.hass.async_create_task(
+                        self._notify(self._msg("problem_title"), self._msg("sensor_failed", room=room.name))
+                    )
+
+            not_heating = self._is_not_heating(room, now)
+            if not_heating != rt.not_heating:
+                rt.not_heating = not_heating
+                changed = True
+                if not_heating:
+                    self.hass.async_create_task(
+                        self._notify(
+                            self._msg("problem_title"),
+                            self._msg("not_heating", room=room.name, hours=NOT_HEATING_HOURS),
+                        )
+                    )
+
+            if rt.paused and rt.pause_reason == "temperature" and self._temperature_window_closed(room, now):
+                self.hass.async_create_task(self._resume_room(room))
+        if changed:
+            async_dispatcher_send(self.hass, self.signal_diagnostics)
+
+    def _is_not_heating(self, room: Room, now: datetime) -> bool:
+        rt = self.runtime[room.id]
+        state = self.hass.states.get(room.climate)
+        current = self.room_temperature(room)
+        target = _as_float(state.attributes.get("temperature")) if state else None
+        lagging = (
+            self.master_on
+            and not rt.paused
+            and state is not None
+            and state.state == HVACMode.HEAT
+            and current is not None
+            and target is not None
+            and target - current >= NOT_HEATING_DELTA
+        )
+        if not lagging:
+            rt.not_heating_since = None
+            return False
+        if rt.not_heating_since is None:
+            rt.not_heating_since = now
+        return now - rt.not_heating_since >= timedelta(hours=NOT_HEATING_HOURS)
+
+    # ---------- batteries ----------
 
     def _battery_threshold(self) -> float:
         return float(self.config.get(CONF_BATTERY_THRESHOLD, DEFAULT_BATTERY_THRESHOLD))

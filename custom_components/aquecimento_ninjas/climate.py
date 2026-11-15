@@ -169,7 +169,12 @@ class BoilerThermostat(AquecimentoEntity, ClimateEntity, RestoreEntity):
             return
         current = self.current_temperature
         target = self._attr_target_temperature
-        if current is None or target is None or not self._cycle_elapsed():
+        if current is None:
+            # Emergency: no trustworthy room temperature, never leave the boiler firing.
+            if heater_on:
+                await self._switch(False)
+            return
+        if target is None or not self._cycle_elapsed():
             return
         if heater_on and current >= target + self._hot:
             await self._switch(False)

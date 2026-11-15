@@ -26,6 +26,8 @@ _LOGGER = logging.getLogger(__name__)
 type AquecimentoConfigEntry = ConfigEntry[HeatingController]
 
 SERVICE_CREATE_DASHBOARD = "create_dashboard"
+SERVICE_START_BOOST = "start_boost"
+SERVICE_STOP_BOOST = "stop_boost"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AquecimentoConfigEntry) -> bool:
@@ -85,9 +87,32 @@ def _async_register_services(hass: HomeAssistant) -> None:
     if hass.services.has_service(DOMAIN, SERVICE_CREATE_DASHBOARD):
         return
 
+    def _loaded() -> list[AquecimentoConfigEntry]:
+        return [
+            e for e in hass.config_entries.async_entries(DOMAIN)
+            if e.state is ConfigEntryState.LOADED
+        ]
+
+    def _float(value: object) -> float | None:
+        try:
+            return float(value) if value not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+
     async def _create_dashboard(call: ServiceCall) -> None:
-        for entry in hass.config_entries.async_entries(DOMAIN):
-            if entry.state is ConfigEntryState.LOADED:
-                await async_setup_dashboard(hass, entry, force=True)
+        for entry in _loaded():
+            await async_setup_dashboard(hass, entry, force=True)
+
+    async def _start_boost(call: ServiceCall) -> None:
+        for entry in _loaded():
+            await entry.runtime_data.async_start_boost(
+                _float(call.data.get("hours")), _float(call.data.get("temperature"))
+            )
+
+    async def _stop_boost(call: ServiceCall) -> None:
+        for entry in _loaded():
+            await entry.runtime_data.async_stop_boost()
 
     hass.services.async_register(DOMAIN, SERVICE_CREATE_DASHBOARD, _create_dashboard)
+    hass.services.async_register(DOMAIN, SERVICE_START_BOOST, _start_boost)
+    hass.services.async_register(DOMAIN, SERVICE_STOP_BOOST, _stop_boost)
