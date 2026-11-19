@@ -129,7 +129,16 @@ As opções substituem os controlos das automações YAML `aquecimento_*`:
 
 O limite de bateria predefinido é **20%**. Em **Presença e notificações**, também podes desligar notificações de janela, falha do sensor ou divisão que não aquece, sem desligar o controlo do aquecimento.
 
-Em **Horário**, escolhe *Cartão Scheduler (atual)* ou *Entidade Schedule*. Para a segunda opção, cria primeiro um helper **Schedule** no Home Assistant e seleciona-o na integração. Quando está ativo, o modo passa a **Conforto**; quando está inativo, passa a **Eco**. A vista Horário do painel mostra a entidade selecionada; os períodos semanais são editados nas definições do helper Schedule.
+Em **Horário**, escolhe *Cartão Scheduler (atual)* ou *Entidade Schedule*. Para usar o editor de horários do Home Assistant:
+
+1. Vai a **Definições → Dispositivos e serviços → Auxiliares (Helpers)**.
+2. Seleciona **Criar auxiliar → Schedule**.
+3. Dá um nome ao horário, por exemplo *Horário do Aquecimento Central*.
+4. Na grelha semanal, arrasta sobre os dias e horas em que queres aquecimento em **Conforto**. Podes criar vários blocos e editar um bloco selecionando-o.
+5. Seleciona **Criar**. Não são permitidos blocos sobrepostos no mesmo dia nem blocos que atravessem a meia-noite; para esse caso, cria dois blocos consecutivos em dias diferentes.
+6. Volta a **Definições → Dispositivos e serviços → Aquecimento Ninjas → Configurar → Horário**, escolhe *Entidade Schedule* e seleciona o helper criado.
+
+Quando o Schedule está ativo, o modo passa a **Conforto**; quando está inativo, passa a **Eco**. A vista Horário do painel mostra a entidade selecionada. Podes alterar os blocos mais tarde em **Auxiliares (Helpers)**.
 
 **Duração máxima do aquecimento:** em **Automações**, define *Duração máxima do aquecimento* (por defeito `0`, desativado). Por exemplo, `2` desliga o interruptor geral após duas horas seguidas ligado. Com *Notificar 10 minutos antes do desligar automático* ativo e um serviço de notificação configurado, recebes um aviso antes de desligar. O limite e o aviso continuam corretos após reiniciar o Home Assistant.
 

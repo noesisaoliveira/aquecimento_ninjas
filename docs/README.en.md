@@ -129,7 +129,16 @@ These options replace the controls from the YAML `aquecimento_*` automations:
 
 The default low-battery threshold is **20%**. In **Presence and notifications**, you can also turn off window, sensor-failure or not-heating alerts independently without disabling heating control.
 
-In **Schedule**, choose *Scheduler card (current)* or *Schedule entity*. For the latter, first create a Home Assistant **Schedule** helper and select it in the integration. While active, it selects **Comfort**; while inactive, it selects **Eco**. The dashboard's Schedule view shows the selected entity; edit its weekly time blocks in the Schedule helper settings.
+In **Schedule**, choose *Scheduler card (current)* or *Schedule entity*. To use Home Assistant's schedule editor:
+
+1. Go to **Settings → Devices & services → Helpers**.
+2. Select **Create helper → Schedule**.
+3. Name the schedule, for example *Central Heating Schedule*.
+4. In the weekly grid, drag across the days and times when you want **Comfort** heating. You can add multiple blocks and select a block to edit it.
+5. Select **Create**. Blocks cannot overlap on the same day or cross midnight; for an overnight period, create two touching blocks on consecutive days.
+6. Return to **Settings → Devices & services → Aquecimento Ninjas → Configure → Schedule**, choose *Schedule entity*, and select the helper you created.
+
+When the Schedule is active, the integration selects **Comfort**; when inactive, it selects **Eco**. The dashboard's Schedule view shows the selected entity. Edit its time blocks later in **Helpers**.
 
 **Maximum heating runtime:** in **Automation behavior**, set *Maximum heating runtime* (default `0`, disabled). For example, `2` turns off the master heating switch after two continuous hours. With *Notify 10 minutes before automatic shutdown* enabled and a notification service configured, you receive a warning before shutdown. The limit and warning state survive Home Assistant restarts.
 
