@@ -68,6 +68,7 @@ class AquecimentoSwitch(AquecimentoEntity, SwitchEntity, RestoreEntity):
         room: Room | None = None,
     ) -> None:
         super().__init__(controller, key, room)
+        self._key = key
         self._attr_icon = icon
         self._attr_is_on = default
         self._on_change = on_change
@@ -77,6 +78,25 @@ class AquecimentoSwitch(AquecimentoEntity, SwitchEntity, RestoreEntity):
         last = await self.async_get_last_state()
         if last is not None and last.state in (STATE_ON, STATE_OFF):
             self._attr_is_on = last.state == STATE_ON
+        if self._key == "master":
+            data = await self.async_get_last_extra_data()
+            if data is not None:
+                stored = data.as_dict()
+                started_value = stored.get("runtime_started_at")
+                started = dt_util.parse_datetime(started_value) if started_value else None
+                self.controller.restore_runtime_state(
+                    started, bool(stored.get("runtime_warning_sent", False))
+                )
+
+    @property
+    def extra_restore_state_data(self) -> ExtraStoredData | None:
+        if self._key != "master":
+            return None
+        started = self.controller.max_runtime_started_at
+        return _MasterData(
+            started.isoformat() if started is not None else None,
+            self.controller.max_runtime_warning_sent,
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._set(True)
@@ -106,6 +126,18 @@ class _BoostData(ExtraStoredData):
 
     def as_dict(self) -> dict[str, Any]:
         return {"until": self.until, "snapshot": self.snapshot}
+
+
+class _MasterData(ExtraStoredData):
+    def __init__(self, started_at: str | None, warning_sent: bool) -> None:
+        self.started_at = started_at
+        self.warning_sent = warning_sent
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "runtime_started_at": self.started_at,
+            "runtime_warning_sent": self.warning_sent,
+        }
 
 
 class BoostSwitch(AquecimentoEntity, SwitchEntity, RestoreEntity):

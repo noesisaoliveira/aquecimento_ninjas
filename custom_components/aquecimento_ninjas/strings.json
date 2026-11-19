@@ -57,11 +57,48 @@
           "notify_service": "Notification service",
           "notify_windows": "Notify open windows",
           "notify_battery": "Notify low batteries",
+          "notify_sensor_failure": "Notify sensor failures",
+          "notify_not_heating": "Notify when a room is not heating",
           "battery_threshold": "Low battery threshold"
         },
         "data_description": {
           "persons": "Optional. When everyone is away for the delay, away mode turns on; it turns off when someone arrives.",
-          "notify_service": "Optional, e.g. notify.mobile_app_my_phone"
+          "notify_service": "Optional, e.g. notify.mobile_app_my_phone",
+          "battery_threshold": "Notify when a configured battery sensor falls below this percentage."
+        }
+      },
+      "automation": {
+        "title": "Automation behavior",
+        "data": {
+          "enable_mode_apply": "Apply Comfort/Eco temperatures",
+          "enable_slider_sync": "Sync thermostat changes to Comfort/Eco",
+          "enable_presence": "Set away mode from presence",
+          "enable_away_target": "Apply the away temperature",
+          "enable_master": "Enforce the master heating switch",
+          "apply_interval": "Temperature re-apply interval",
+          "max_runtime_hours": "Maximum heating runtime (0 = disabled)",
+          "notify_runtime_warning": "Notify 10 minutes before automatic shutdown",
+          "master_settle_seconds": "Delay after turning heating on",
+          "verify_seconds": "Verify thermostat command after",
+          "verify_retries": "Thermostat command retries",
+          "battery_check_hour": "Daily battery check hour",
+          "battery_check_minute": "Daily battery check minute"
+        },
+        "data_description": {
+          "enable_away_target": "When off, the Away mode switch remains available but does not apply its target temperature.",
+          "enable_master": "When off, the master switch does not force the boiler or room thermostats on or off.",
+          "max_runtime_hours": "0 disables the safety limit. When enabled, heating turns off after this many continuous hours."
+        }
+      },
+      "windows": {
+        "title": "Window behavior",
+        "data": {
+          "enable_windows": "Pause heating when a window is open",
+          "window_contact_seconds": "Window sensor debounce",
+          "window_drop_degrees": "Temperature drop to detect",
+          "window_drop_minutes": "Temperature drop period",
+          "window_min_pause_minutes": "Minimum pause after temperature drop",
+          "window_max_pause_minutes": "Maximum pause after temperature drop"
         }
       },
       "dashboard": {
@@ -98,6 +135,8 @@
         "title": "Aquecimento Ninjas",
         "menu_options": {
           "presence": "Presence and notifications",
+          "automation": "Automation behavior",
+          "windows": "Window behavior",
           "boiler": "Boiler",
           "rooms": "Rooms",
           "dashboard": "Dashboard"
@@ -134,7 +173,38 @@
           "notify_service": "Notification service",
           "notify_windows": "Notify open windows",
           "notify_battery": "Notify low batteries",
+          "notify_sensor_failure": "Notify sensor failures",
+          "notify_not_heating": "Notify when a room is not heating",
           "battery_threshold": "Low battery threshold"
+        }
+      },
+      "automation": {
+        "title": "Automation behavior",
+        "data": {
+          "enable_mode_apply": "Apply Comfort/Eco temperatures",
+          "enable_slider_sync": "Sync thermostat changes to Comfort/Eco",
+          "enable_presence": "Set away mode from presence",
+          "enable_away_target": "Apply the away temperature",
+          "enable_master": "Enforce the master heating switch",
+          "apply_interval": "Temperature re-apply interval",
+          "max_runtime_hours": "Maximum heating runtime (0 = disabled)",
+          "notify_runtime_warning": "Notify 10 minutes before automatic shutdown",
+          "master_settle_seconds": "Delay after turning heating on",
+          "verify_seconds": "Verify thermostat command after",
+          "verify_retries": "Thermostat command retries",
+          "battery_check_hour": "Daily battery check hour",
+          "battery_check_minute": "Daily battery check minute"
+        }
+      },
+      "windows": {
+        "title": "Window behavior",
+        "data": {
+          "enable_windows": "Pause heating when a window is open",
+          "window_contact_seconds": "Window sensor debounce",
+          "window_drop_degrees": "Temperature drop to detect",
+          "window_drop_minutes": "Temperature drop period",
+          "window_min_pause_minutes": "Minimum pause after temperature drop",
+          "window_max_pause_minutes": "Maximum pause after temperature drop"
         }
       },
       "dashboard": {

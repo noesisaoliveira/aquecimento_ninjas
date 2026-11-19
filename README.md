@@ -108,9 +108,27 @@ Depois: *Ferramentas de programador → Verificar configuração* → **reinicia
 | 2. Caldeira | Existente: a entidade climate (+ relé opcional para estatísticas). Criar: o relé, tolerâncias e ciclo mínimo (recomendado 5 min) |
 | 3. Divisões | Por divisão: nome, Better Thermostat, as válvulas, sensor da divisão, sensores de bateria e janela (opcionais). Repete até ter todas (máx. 5 válvulas) |
 | 4. Presença | Pessoas para o modo ausente, atraso, serviço de notificação (`notify.mobile_app_…`), notificações de janela/bateria |
-| 5. Painel | Criar painel, o título e o estilo (Automático / Melhorado / Padrão) |
+| 5. Automações | Ativar/desativar aplicação Conforto/Eco, sincronização da válvula, presença, temperatura ausente e interruptor geral; definir a duração máxima do aquecimento; ajustar intervalos e verificações |
+| 6. Janelas | Ativar/desativar a pausa e ajustar estabilização, queda de temperatura e duração da pausa |
+| 7. Painel | Criar painel, o título e o estilo (Automático / Melhorado / Padrão) |
 
 Para mudar depois: **Definições → Dispositivos e serviços → Aquecimento Ninjas → Configurar**.
+
+As opções substituem os controlos das automações YAML `aquecimento_*`:
+
+| Automação YAML | Opção da integração |
+|---|---|
+| `aquecimento_aplicar_horarios` | **Automações → Aplicar temperaturas Conforto/Eco**; intervalo de reaplicação, confirmação e tentativas das válvulas |
+| `aquecimento_valvula_para_slider` | **Automações → Sincronizar alterações do termóstato** |
+| `aquecimento_presenca` | **Automações → Ativar modo ausente pela presença**; pessoas e atraso em **Presença e notificações** |
+| `aquecimento_modo_ausente` | **Automações → Aplicar a temperatura de ausência** |
+| `aquecimento_interruptor_geral` | **Automações → Aplicar o interruptor geral do aquecimento** |
+| `aquecimento_janela_aberta` | **Janelas → Pausar o aquecimento**; tempos e queda de temperatura configuráveis. A notificação pode ser desligada em **Presença e notificações** |
+| `aquecimento_bateria_fraca` | **Presença e notificações → Notificar bateria fraca**; limite percentual e hora/minuto da verificação diária |
+
+O limite de bateria predefinido é **20%**. Em **Presença e notificações**, também podes desligar notificações de janela, falha do sensor ou divisão que não aquece, sem desligar o controlo do aquecimento.
+
+**Duração máxima do aquecimento:** em **Automações**, define *Duração máxima do aquecimento* (por defeito `0`, desativado). Por exemplo, `2` desliga o interruptor geral após duas horas seguidas ligado. Com *Notificar 10 minutos antes do desligar automático* ativo e um serviço de notificação configurado, recebes um aviso antes de desligar. O limite e o aviso continuam corretos após reiniciar o Home Assistant.
 
 ### Usar um termóstato de caldeira existente
 Define o sensor alvo dele como o sensor **Temperatura de referência** da integração, ex. no `generic_thermostat`:

@@ -28,7 +28,10 @@ from .const import (
     BOILER_EXISTING,
     CONF_ADD_ANOTHER,
     CONF_AWAY_DELAY,
+    CONF_APPLY_INTERVAL,
     CONF_BATTERY_THRESHOLD,
+    CONF_BATTERY_CHECK_HOUR,
+    CONF_BATTERY_CHECK_MINUTE,
     CONF_BOILER_CLIMATE,
     CONF_BOILER_MODE,
     CONF_BOILER_SWITCH,
@@ -36,10 +39,21 @@ from .const import (
     CONF_CREATE_DASHBOARD,
     CONF_DASHBOARD_STYLE,
     CONF_DASHBOARD_TITLE,
+    CONF_ENABLE_AWAY_TARGET,
+    CONF_ENABLE_MASTER,
+    CONF_ENABLE_MODE_APPLY,
+    CONF_ENABLE_PRESENCE,
+    CONF_ENABLE_SLIDER_SYNC,
+    CONF_ENABLE_WINDOWS,
     CONF_HOT_TOLERANCE,
+    CONF_MASTER_SETTLE_SECONDS,
+    CONF_MAX_RUNTIME_HOURS,
     CONF_MIN_CYCLE,
     CONF_NOTIFY,
     CONF_NOTIFY_BATTERY,
+    CONF_NOTIFY_NOT_HEATING,
+    CONF_NOTIFY_RUNTIME_WARNING,
+    CONF_NOTIFY_SENSOR_FAILURE,
     CONF_NOTIFY_WINDOWS,
     CONF_PERSONS,
     CONF_REGENERATE_DASHBOARD,
@@ -51,17 +65,36 @@ from .const import (
     CONF_ROOM_VALVES,
     CONF_ROOM_WINDOWS,
     CONF_ROOMS,
+    CONF_VERIFY_RETRIES,
+    CONF_VERIFY_SECONDS,
+    CONF_WINDOW_CONTACT_SECONDS,
+    CONF_WINDOW_DROP_DEGREES,
+    CONF_WINDOW_DROP_MINUTES,
+    CONF_WINDOW_MAX_PAUSE_MINUTES,
+    CONF_WINDOW_MIN_PAUSE_MINUTES,
     DEFAULT_AWAY_DELAY,
+    DEFAULT_BATTERY_CHECK_HOUR,
+    DEFAULT_BATTERY_CHECK_MINUTE,
     DEFAULT_BATTERY_THRESHOLD,
     DEFAULT_COLD_TOLERANCE,
     DEFAULT_HOT_TOLERANCE,
     DEFAULT_MIN_CYCLE,
+    DEFAULT_MAX_RUNTIME_HOURS,
     DEFAULT_NAME,
+    APPLY_INTERVAL_MINUTES,
+    MASTER_SETTLE_SECONDS,
+    MAX_RETRIES,
+    VERIFY_SECONDS,
     DOMAIN,
     MAX_VALVES,
     STYLE_AUTO,
     STYLE_ENHANCED,
     STYLE_STANDARD,
+    WINDOW_CONTACT_SECONDS,
+    WINDOW_DROP_DEGREES,
+    WINDOW_DROP_MINUTES,
+    WINDOW_MAX_PAUSE_MINUTES,
+    WINDOW_MIN_PAUSE_MINUTES,
 )
 
 
@@ -198,9 +231,101 @@ def _presence_schema(defaults: dict[str, Any]) -> vol.Schema:
                 CONF_NOTIFY_BATTERY, default=defaults.get(CONF_NOTIFY_BATTERY, True)
             ): bool,
             vol.Required(
+                CONF_NOTIFY_SENSOR_FAILURE,
+                default=defaults.get(CONF_NOTIFY_SENSOR_FAILURE, True),
+            ): bool,
+            vol.Required(
+                CONF_NOTIFY_NOT_HEATING,
+                default=defaults.get(CONF_NOTIFY_NOT_HEATING, True),
+            ): bool,
+            vol.Required(
+                CONF_NOTIFY_RUNTIME_WARNING,
+                default=defaults.get(CONF_NOTIFY_RUNTIME_WARNING, True),
+            ): bool,
+            vol.Required(
                 CONF_BATTERY_THRESHOLD,
                 default=defaults.get(CONF_BATTERY_THRESHOLD, DEFAULT_BATTERY_THRESHOLD),
             ): _number_selector(5, 50, 1, "%"),
+        }
+    )
+
+
+def _automation_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_ENABLE_MODE_APPLY, default=defaults.get(CONF_ENABLE_MODE_APPLY, True)
+            ): bool,
+            vol.Required(
+                CONF_ENABLE_SLIDER_SYNC, default=defaults.get(CONF_ENABLE_SLIDER_SYNC, True)
+            ): bool,
+            vol.Required(
+                CONF_ENABLE_PRESENCE, default=defaults.get(CONF_ENABLE_PRESENCE, True)
+            ): bool,
+            vol.Required(
+                CONF_ENABLE_AWAY_TARGET, default=defaults.get(CONF_ENABLE_AWAY_TARGET, True)
+            ): bool,
+            vol.Required(
+                CONF_ENABLE_MASTER, default=defaults.get(CONF_ENABLE_MASTER, True)
+            ): bool,
+            vol.Required(
+                CONF_APPLY_INTERVAL,
+                default=defaults.get(CONF_APPLY_INTERVAL, APPLY_INTERVAL_MINUTES),
+            ): _number_selector(1, 240, 1, "min"),
+            vol.Required(
+                CONF_MAX_RUNTIME_HOURS,
+                default=defaults.get(CONF_MAX_RUNTIME_HOURS, DEFAULT_MAX_RUNTIME_HOURS),
+            ): _number_selector(0, 24, 0.5, "h"),
+            vol.Required(
+                CONF_MASTER_SETTLE_SECONDS,
+                default=defaults.get(CONF_MASTER_SETTLE_SECONDS, MASTER_SETTLE_SECONDS),
+            ): _number_selector(0, 60, 1, "s"),
+            vol.Required(
+                CONF_VERIFY_SECONDS,
+                default=defaults.get(CONF_VERIFY_SECONDS, VERIFY_SECONDS),
+            ): _number_selector(10, 600, 10, "s"),
+            vol.Required(
+                CONF_VERIFY_RETRIES,
+                default=defaults.get(CONF_VERIFY_RETRIES, MAX_RETRIES),
+            ): _number_selector(0, 10, 1, "retries"),
+            vol.Required(
+                CONF_BATTERY_CHECK_HOUR,
+                default=defaults.get(CONF_BATTERY_CHECK_HOUR, DEFAULT_BATTERY_CHECK_HOUR),
+            ): _number_selector(0, 23, 1, "h"),
+            vol.Required(
+                CONF_BATTERY_CHECK_MINUTE,
+                default=defaults.get(CONF_BATTERY_CHECK_MINUTE, DEFAULT_BATTERY_CHECK_MINUTE),
+            ): _number_selector(0, 59, 1, "min"),
+        }
+    )
+
+
+def _window_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_ENABLE_WINDOWS, default=defaults.get(CONF_ENABLE_WINDOWS, True)
+            ): bool,
+            vol.Required(
+                CONF_WINDOW_CONTACT_SECONDS,
+                default=defaults.get(CONF_WINDOW_CONTACT_SECONDS, WINDOW_CONTACT_SECONDS),
+            ): _number_selector(1, 120, 1, "s"),
+            vol.Required(
+                CONF_WINDOW_DROP_DEGREES,
+                default=defaults.get(CONF_WINDOW_DROP_DEGREES, WINDOW_DROP_DEGREES),
+            ): _number_selector(0.1, 5, 0.1, "°C"),
+            vol.Required(
+                CONF_WINDOW_DROP_MINUTES,
+                default=defaults.get(CONF_WINDOW_DROP_MINUTES, WINDOW_DROP_MINUTES),
+            ): _number_selector(1, 60, 1, "min"),
+            vol.Required(
+                CONF_WINDOW_MIN_PAUSE_MINUTES,
+                default=defaults.get(CONF_WINDOW_MIN_PAUSE_MINUTES, WINDOW_MIN_PAUSE_MINUTES),
+            ): _number_selector(1, 180, 1, "min"),
+            vol.Required(
+                CONF_WINDOW_MAX_PAUSE_MINUTES,
+                default=defaults.get(CONF_WINDOW_MAX_PAUSE_MINUTES, WINDOW_MAX_PAUSE_MINUTES),
+            ): _number_selector(1, 360, 1, "min"),
         }
     )
 
@@ -378,11 +503,31 @@ class AquecimentoNinjasConfigFlow(ConfigFlow, domain=DOMAIN):
             errors = _validate_notify(self.hass, user_input)
             if not errors:
                 self._data.update(user_input)
-                return await self.async_step_dashboard()
+                return await self.async_step_automation()
         return self.async_show_form(
             step_id="presence",
             data_schema=_presence_schema(user_input or self._data),
             errors=errors,
+        )
+
+    async def async_step_automation(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_windows()
+        return self.async_show_form(
+            step_id="automation", data_schema=_automation_schema(self._data)
+        )
+
+    async def async_step_windows(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_dashboard()
+        return self.async_show_form(
+            step_id="windows", data_schema=_window_schema(self._data)
         )
 
     async def async_step_dashboard(
@@ -416,7 +561,8 @@ class AquecimentoNinjasOptionsFlow(OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return self.async_show_menu(
-            step_id="init", menu_options=["presence", "boiler", "rooms", "dashboard"]
+            step_id="init",
+            menu_options=["presence", "automation", "windows", "boiler", "rooms", "dashboard"],
         )
 
     async def async_step_presence(
@@ -433,6 +579,24 @@ class AquecimentoNinjasOptionsFlow(OptionsFlow):
             step_id="presence",
             data_schema=_presence_schema(user_input or self._config),
             errors=errors,
+        )
+
+    async def async_step_automation(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self._save(user_input)
+        return self.async_show_form(
+            step_id="automation", data_schema=_automation_schema(self._config)
+        )
+
+    async def async_step_windows(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self._save(user_input)
+        return self.async_show_form(
+            step_id="windows", data_schema=_window_schema(self._config)
         )
 
     async def async_step_boiler(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

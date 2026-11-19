@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.1 – 2026-11-19
+
+- Add an optional maximum heating runtime, disabled by default, with a configurable 10-minute warning notification.
+- Persist the heating cycle start and warning state across Home Assistant restarts.
+
+## 1.3.0 – 2026-11-19
+
+- Add individual controls for the former `aquecimento_*` YAML automations in setup and integration options.
+- Make apply interval, thermostat verification delay/retries, daily battery-check time, and window detection/pause timings configurable.
+- Keep the low-battery threshold configurable (20% by default).
+
 ## 1.2.0 – 2026-11-15
 
 - **Open window pause/resume** for any valve: contact sensors (10 s debounce) or a fast temperature drop

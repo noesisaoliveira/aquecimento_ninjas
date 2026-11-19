@@ -57,11 +57,48 @@
           "notify_service": "Serviço de notificação",
           "notify_windows": "Notificar janelas abertas",
           "notify_battery": "Notificar bateria fraca",
+          "notify_sensor_failure": "Notificar falhas dos sensores",
+          "notify_not_heating": "Notificar quando uma divisão não aquece",
           "battery_threshold": "Limite de bateria fraca"
         },
         "data_description": {
           "persons": "Opcional. Quando todos estão fora durante o atraso, o modo ausente liga; desliga quando alguém chega.",
-          "notify_service": "Opcional, ex.: notify.mobile_app_o_meu_telemovel"
+          "notify_service": "Opcional, ex.: notify.mobile_app_o_meu_telemovel",
+          "battery_threshold": "Notifica quando um sensor de bateria configurado fica abaixo desta percentagem."
+        }
+      },
+      "automation": {
+        "title": "Comportamento das automações",
+        "data": {
+          "enable_mode_apply": "Aplicar temperaturas Conforto/Eco",
+          "enable_slider_sync": "Sincronizar alterações do termóstato com Conforto/Eco",
+          "enable_presence": "Ativar modo ausente pela presença",
+          "enable_away_target": "Aplicar a temperatura de ausência",
+          "enable_master": "Aplicar o interruptor geral do aquecimento",
+          "apply_interval": "Intervalo para reaplicar a temperatura",
+          "max_runtime_hours": "Duração máxima do aquecimento (0 = desativado)",
+          "notify_runtime_warning": "Notificar 10 minutos antes do desligar automático",
+          "master_settle_seconds": "Atraso após ligar o aquecimento",
+          "verify_seconds": "Confirmar o comando do termóstato após",
+          "verify_retries": "Tentativas de reenvio do comando",
+          "battery_check_hour": "Hora da verificação diária das baterias",
+          "battery_check_minute": "Minuto da verificação diária das baterias"
+        },
+        "data_description": {
+          "enable_away_target": "Desligado, o seletor Modo ausente continua disponível, mas não aplica a temperatura de ausência.",
+          "enable_master": "Desligado, o interruptor geral não força a caldeira nem os termóstatos das divisões a ligar ou desligar.",
+          "max_runtime_hours": "0 desativa o limite de segurança. Ativado, desliga o aquecimento após este número de horas seguidas."
+        }
+      },
+      "windows": {
+        "title": "Comportamento das janelas",
+        "data": {
+          "enable_windows": "Pausar o aquecimento quando uma janela está aberta",
+          "window_contact_seconds": "Estabilização do sensor de janela",
+          "window_drop_degrees": "Queda de temperatura para detetar",
+          "window_drop_minutes": "Período da queda de temperatura",
+          "window_min_pause_minutes": "Pausa mínima após queda de temperatura",
+          "window_max_pause_minutes": "Pausa máxima após queda de temperatura"
         }
       },
       "dashboard": {
@@ -98,6 +135,8 @@
         "title": "Aquecimento Ninjas",
         "menu_options": {
           "presence": "Presença e notificações",
+          "automation": "Comportamento das automações",
+          "windows": "Comportamento das janelas",
           "boiler": "Caldeira",
           "rooms": "Divisões",
           "dashboard": "Painel"
@@ -134,7 +173,38 @@
           "notify_service": "Serviço de notificação",
           "notify_windows": "Notificar janelas abertas",
           "notify_battery": "Notificar bateria fraca",
+          "notify_sensor_failure": "Notificar falhas dos sensores",
+          "notify_not_heating": "Notificar quando uma divisão não aquece",
           "battery_threshold": "Limite de bateria fraca"
+        }
+      },
+      "automation": {
+        "title": "Comportamento das automações",
+        "data": {
+          "enable_mode_apply": "Aplicar temperaturas Conforto/Eco",
+          "enable_slider_sync": "Sincronizar alterações do termóstato com Conforto/Eco",
+          "enable_presence": "Ativar modo ausente pela presença",
+          "enable_away_target": "Aplicar a temperatura de ausência",
+          "enable_master": "Aplicar o interruptor geral do aquecimento",
+          "apply_interval": "Intervalo para reaplicar a temperatura",
+          "max_runtime_hours": "Duração máxima do aquecimento (0 = desativado)",
+          "notify_runtime_warning": "Notificar 10 minutos antes do desligar automático",
+          "master_settle_seconds": "Atraso após ligar o aquecimento",
+          "verify_seconds": "Confirmar o comando do termóstato após",
+          "verify_retries": "Tentativas de reenvio do comando",
+          "battery_check_hour": "Hora da verificação diária das baterias",
+          "battery_check_minute": "Minuto da verificação diária das baterias"
+        }
+      },
+      "windows": {
+        "title": "Comportamento das janelas",
+        "data": {
+          "enable_windows": "Pausar o aquecimento quando uma janela está aberta",
+          "window_contact_seconds": "Estabilização do sensor de janela",
+          "window_drop_degrees": "Queda de temperatura para detetar",
+          "window_drop_minutes": "Período da queda de temperatura",
+          "window_min_pause_minutes": "Pausa mínima após queda de temperatura",
+          "window_max_pause_minutes": "Pausa máxima após queda de temperatura"
         }
       },
       "dashboard": {

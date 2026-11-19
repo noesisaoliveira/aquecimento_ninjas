@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "aquecimento_ninjas"
-VERSION = "1.2.0"
+VERSION = "1.3.1"
 DOCS_URL = "https://github.com/noesisaoliveira/aquecimento_ninjas"
 
 PLATFORMS: list[Platform] = [
@@ -42,7 +42,28 @@ CONF_AWAY_DELAY = "away_delay"
 CONF_NOTIFY = "notify_service"
 CONF_NOTIFY_WINDOWS = "notify_windows"
 CONF_NOTIFY_BATTERY = "notify_battery"
+CONF_NOTIFY_SENSOR_FAILURE = "notify_sensor_failure"
+CONF_NOTIFY_NOT_HEATING = "notify_not_heating"
 CONF_BATTERY_THRESHOLD = "battery_threshold"
+CONF_ENABLE_MODE_APPLY = "enable_mode_apply"
+CONF_ENABLE_SLIDER_SYNC = "enable_slider_sync"
+CONF_ENABLE_PRESENCE = "enable_presence"
+CONF_ENABLE_AWAY_TARGET = "enable_away_target"
+CONF_ENABLE_MASTER = "enable_master"
+CONF_ENABLE_WINDOWS = "enable_windows"
+CONF_APPLY_INTERVAL = "apply_interval"
+CONF_MASTER_SETTLE_SECONDS = "master_settle_seconds"
+CONF_MAX_RUNTIME_HOURS = "max_runtime_hours"
+CONF_NOTIFY_RUNTIME_WARNING = "notify_runtime_warning"
+CONF_VERIFY_SECONDS = "verify_seconds"
+CONF_VERIFY_RETRIES = "verify_retries"
+CONF_BATTERY_CHECK_HOUR = "battery_check_hour"
+CONF_BATTERY_CHECK_MINUTE = "battery_check_minute"
+CONF_WINDOW_CONTACT_SECONDS = "window_contact_seconds"
+CONF_WINDOW_DROP_DEGREES = "window_drop_degrees"
+CONF_WINDOW_DROP_MINUTES = "window_drop_minutes"
+CONF_WINDOW_MIN_PAUSE_MINUTES = "window_min_pause_minutes"
+CONF_WINDOW_MAX_PAUSE_MINUTES = "window_max_pause_minutes"
 
 CONF_CREATE_DASHBOARD = "create_dashboard"
 CONF_DASHBOARD_TITLE = "dashboard_title"
@@ -68,6 +89,9 @@ DEFAULT_HOT_TOLERANCE = 0.0
 DEFAULT_MIN_CYCLE = 5
 DEFAULT_AWAY_DELAY = 30
 DEFAULT_BATTERY_THRESHOLD = 20
+DEFAULT_BATTERY_CHECK_HOUR = 9
+DEFAULT_BATTERY_CHECK_MINUTE = 0
+DEFAULT_MAX_RUNTIME_HOURS = 0.0
 DEFAULT_BOILER_TARGET = 20.0
 DEFAULT_BOOST_HOURS = 1.0
 DEFAULT_BOOST_TEMPERATURE = 23.0
@@ -82,6 +106,7 @@ DASHBOARD_ID = "aquecimento_ninjas"
 APPLY_INTERVAL_MINUTES = 30
 SUPPRESS_SECONDS = 10
 MASTER_SETTLE_SECONDS = 5
+RUNTIME_WARNING_MINUTES = 10
 
 # Verified commands: check the thermostat accepted it, resend otherwise.
 VERIFY_SECONDS = 90

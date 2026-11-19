@@ -108,9 +108,27 @@ Then: *Developer tools → Check configuration* → **restart** → in *Settings
 | 2. Boiler | Existing: the climate entity (+ optional relay for statistics). Create: the relay, tolerances and minimum cycle (5 min recommended) |
 | 3. Rooms | Per room: name, Better Thermostat, its valves, room sensor, optional battery and window sensors. Repeat until all rooms are added (max 5 valves) |
 | 4. Presence | People for away mode, delay, notification service (`notify.mobile_app_…`), window/battery notifications |
-| 5. Dashboard | Create dashboard, its title and style (Automatic / Enhanced / Standard) |
+| 5. Automations | Enable/disable Comfort/Eco apply, valve sync, presence, away temperature and master switch; set a maximum heating runtime and adjust verification settings |
+| 6. Windows | Enable/disable pausing and adjust debounce, temperature drop and pause duration |
+| 7. Dashboard | Create dashboard, its title and style (Automatic / Enhanced / Standard) |
 
 Change anything later in **Settings → Devices & services → Aquecimento Ninjas → Configure**.
+
+These options replace the controls from the YAML `aquecimento_*` automations:
+
+| YAML automation | Integration option |
+|---|---|
+| `aquecimento_aplicar_horarios` | **Automations → Apply Comfort/Eco temperatures**; re-apply interval, verification and retries |
+| `aquecimento_valvula_para_slider` | **Automations → Sync thermostat changes to Comfort/Eco** |
+| `aquecimento_presenca` | **Automations → Set away mode from presence**; people and delay in **Presence and notifications** |
+| `aquecimento_modo_ausente` | **Automations → Apply the away temperature** |
+| `aquecimento_interruptor_geral` | **Automations → Enforce the master heating switch** |
+| `aquecimento_janela_aberta` | **Windows → Pause heating**; debounce, temperature-drop and pause timings are adjustable. Its notification is controlled in **Presence and notifications** |
+| `aquecimento_bateria_fraca` | **Presence and notifications → Notify low batteries**; percentage threshold and daily check time |
+
+The default low-battery threshold is **20%**. In **Presence and notifications**, you can also turn off window, sensor-failure or not-heating alerts independently without disabling heating control.
+
+**Maximum heating runtime:** in **Automation behavior**, set *Maximum heating runtime* (default `0`, disabled). For example, `2` turns off the master heating switch after two continuous hours. With *Notify 10 minutes before automatic shutdown* enabled and a notification service configured, you receive a warning before shutdown. The limit and warning state survive Home Assistant restarts.
 
 ### Using an existing boiler thermostat
 Set its target sensor to the integration's **Reference temperature** sensor, e.g. for `generic_thermostat`:

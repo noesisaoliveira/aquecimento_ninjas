@@ -38,12 +38,25 @@ from .const import (
     APPLY_INTERVAL_MINUTES,
     BOILER_CREATE,
     CONF_AWAY_DELAY,
+    CONF_APPLY_INTERVAL,
+    CONF_BATTERY_CHECK_HOUR,
+    CONF_BATTERY_CHECK_MINUTE,
     CONF_BATTERY_THRESHOLD,
     CONF_BOILER_CLIMATE,
     CONF_BOILER_MODE,
     CONF_BOILER_SWITCH,
+    CONF_ENABLE_AWAY_TARGET,
+    CONF_ENABLE_MASTER,
+    CONF_ENABLE_MODE_APPLY,
+    CONF_ENABLE_PRESENCE,
+    CONF_ENABLE_SLIDER_SYNC,
+    CONF_ENABLE_WINDOWS,
+    CONF_MAX_RUNTIME_HOURS,
     CONF_NOTIFY,
     CONF_NOTIFY_BATTERY,
+    CONF_NOTIFY_NOT_HEATING,
+    CONF_NOTIFY_RUNTIME_WARNING,
+    CONF_NOTIFY_SENSOR_FAILURE,
     CONF_NOTIFY_WINDOWS,
     CONF_PERSONS,
     CONF_ROOM_BATTERIES,
@@ -54,10 +67,22 @@ from .const import (
     CONF_ROOM_VALVES,
     CONF_ROOM_WINDOWS,
     CONF_ROOMS,
+    CONF_MASTER_SETTLE_SECONDS,
+    CONF_VERIFY_RETRIES,
+    CONF_VERIFY_SECONDS,
+    CONF_WINDOW_CONTACT_SECONDS,
+    CONF_WINDOW_DROP_DEGREES,
+    CONF_WINDOW_DROP_MINUTES,
+    CONF_WINDOW_MAX_PAUSE_MINUTES,
+    CONF_WINDOW_MIN_PAUSE_MINUTES,
     DEFAULT_AWAY_DELAY,
+    DEFAULT_BATTERY_CHECK_HOUR,
+    DEFAULT_BATTERY_CHECK_MINUTE,
     DEFAULT_BATTERY_THRESHOLD,
+    DEFAULT_MAX_RUNTIME_HOURS,
     DOMAIN,
     MASTER_SETTLE_SECONDS,
+    RUNTIME_WARNING_MINUTES,
     MAX_RETRIES,
     MAX_TEMP,
     MIN_TEMP,
@@ -98,6 +123,8 @@ _MESSAGES = {
         "problem_title": "Heating - problem",
         "sensor_failed": "{room}: room sensor not reporting. Emergency mode: eco temperature.",
         "not_heating": "{room} is not reaching its target temperature for {hours} h.",
+        "runtime_title": "Heating safety limit",
+        "runtime_warning": "Heating will turn off in 10 minutes when it reaches the {hours} h runtime limit.",
     },
     "pt": {
         "window_title": "Aquecimento",
@@ -108,6 +135,8 @@ _MESSAGES = {
         "problem_title": "Aquecimento - problema",
         "sensor_failed": "{room}: o sensor da divisão não está a enviar dados. Modo de emergência: temperatura eco.",
         "not_heating": "{room} não chega à temperatura pretendida há {hours} h.",
+        "runtime_title": "Limite de segurança do aquecimento",
+        "runtime_warning": "O aquecimento será desligado dentro de 10 minutos, quando atingir o limite de {hours} h ligado.",
     },
 }
 
@@ -251,6 +280,10 @@ class HeatingController:
         self._unsubs: list[CALLBACK_TYPE] = []
         self._away_timer: CALLBACK_TYPE | None = None
         self._settle_timer: CALLBACK_TYPE | None = None
+        self._runtime_warning_timer: CALLBACK_TYPE | None = None
+        self._runtime_limit_timer: CALLBACK_TYPE | None = None
+        self._runtime_started_at: datetime | None = None
+        self._runtime_warning_sent = False
         self._suppress_until = 0.0
         self._was_home: bool | None = None
         self._range_warned: set[str] = set()
@@ -277,6 +310,14 @@ class HeatingController:
     def boost_active(self) -> bool:
         return self.boost_until is not None
 
+    @property
+    def max_runtime_started_at(self) -> datetime | None:
+        return self._runtime_started_at
+
+    @property
+    def max_runtime_warning_sent(self) -> bool:
+        return self._runtime_warning_sent
+
     def boost_selected(self, room: Room) -> bool:
         switch = self.boost_rooms.get(room.id)
         return bool(switch and switch.is_on)
@@ -301,7 +342,7 @@ class HeatingController:
 
     @property
     def master_on(self) -> bool:
-        return self.master.is_on if self.master else True
+        return self.master.is_on if self.master and self.config.get(CONF_ENABLE_MASTER, True) else True
 
     @property
     def away_on(self) -> bool:
@@ -359,10 +400,17 @@ class HeatingController:
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
-        for timer in (self._away_timer, self._settle_timer, self._boost_timer):
+        for timer in (
+            self._away_timer,
+            self._settle_timer,
+            self._boost_timer,
+            self._runtime_warning_timer,
+            self._runtime_limit_timer,
+        ):
             if timer:
                 timer()
         self._away_timer = self._settle_timer = self._boost_timer = None
+        self._runtime_warning_timer = self._runtime_limit_timer = None
         for rt in self.runtime.values():
             rt.cancel_timers()
 
@@ -377,17 +425,23 @@ class HeatingController:
             climates.append(self.boiler_climate_id)
         track(async_track_state_change_event(hass, climates, self._on_climate_change))
 
-        if self.persons:
+        if self.persons and self.config.get(CONF_ENABLE_PRESENCE, True):
             track(async_track_state_change_event(hass, self.persons, self._on_person_change))
 
         windows = [w for r in self.rooms for w in r.windows]
-        if windows:
+        if windows and self.config.get(CONF_ENABLE_WINDOWS, True):
             track(async_track_state_change_event(hass, windows, self._on_window_change))
 
         batteries = [b for r in self.rooms for b in r.batteries]
-        if batteries:
+        if batteries and self.config.get(CONF_NOTIFY_BATTERY, True):
             track(async_track_state_change_event(hass, batteries, self._on_battery_change))
-            track(async_track_time_change(hass, self._daily_battery_check, hour=9, minute=0, second=0))
+            track(async_track_time_change(
+                hass,
+                self._daily_battery_check,
+                hour=int(self.config.get(CONF_BATTERY_CHECK_HOUR, DEFAULT_BATTERY_CHECK_HOUR)),
+                minute=int(self.config.get(CONF_BATTERY_CHECK_MINUTE, DEFAULT_BATTERY_CHECK_MINUTE)),
+                second=0,
+            ))
 
         source = self._stats_source()
         if source:
@@ -401,17 +455,25 @@ class HeatingController:
         for room in self.rooms:
             if (value := _state_float(hass.states.get(room.sensor))) is not None:
                 self.runtime[room.id].readings.append((now, value))
-            if any(hass.states.is_state(w, STATE_ON) for w in room.windows):
+            if self.config.get(CONF_ENABLE_WINDOWS, True) and any(
+                hass.states.is_state(w, STATE_ON) for w in room.windows
+            ):
                 self._schedule_contact_check(room)
         self._diagnostics_tick(now)
 
-        track(
-            async_track_time_interval(
-                hass, self._periodic_apply, timedelta(minutes=APPLY_INTERVAL_MINUTES)
+        if self.config.get(CONF_ENABLE_MODE_APPLY, True) or self.config.get(
+            CONF_ENABLE_AWAY_TARGET, True
+        ):
+            track(
+                async_track_time_interval(
+                    hass,
+                    self._periodic_apply,
+                    timedelta(minutes=int(self.config.get(CONF_APPLY_INTERVAL, APPLY_INTERVAL_MINUTES))),
+                )
             )
-        )
 
-        self._was_home = self._anyone_home() if self.persons else None
+        presence_enabled = self.config.get(CONF_ENABLE_PRESENCE, True)
+        self._was_home = self._anyone_home() if self.persons and presence_enabled else None
         if self._was_home is False:
             self._start_away_timer()
 
@@ -422,7 +484,10 @@ class HeatingController:
                 self._schedule_boost_end()
             return
 
-        await self.async_master_changed()
+        if self.config.get(CONF_ENABLE_MASTER, True):
+            await self.async_master_changed()
+        else:
+            self.request_apply()
 
     # ---------- service helpers ----------
 
@@ -443,6 +508,88 @@ class HeatingController:
             return
         domain, _, name = service.partition(".")
         await self._call(domain, name, None, title=title, message=message)
+
+    def restore_runtime_state(
+        self, started_at: datetime | None, warning_sent: bool
+    ) -> None:
+        self._runtime_started_at = started_at
+        self._runtime_warning_sent = warning_sent
+
+    def _persist_runtime_state(self) -> None:
+        if self.master is not None:
+            self.master.async_write_ha_state()
+
+    def _cancel_runtime_timers(self) -> None:
+        for timer in (self._runtime_warning_timer, self._runtime_limit_timer):
+            if timer:
+                timer()
+        self._runtime_warning_timer = self._runtime_limit_timer = None
+
+    def _sync_runtime_limit(self) -> None:
+        hours = float(self.config.get(CONF_MAX_RUNTIME_HOURS, DEFAULT_MAX_RUNTIME_HOURS))
+        if self.master is None or not self.master.is_on or hours <= 0:
+            self._cancel_runtime_timers()
+            changed = self._runtime_started_at is not None or self._runtime_warning_sent
+            self._runtime_started_at = None
+            self._runtime_warning_sent = False
+            if changed:
+                self._persist_runtime_state()
+            return
+
+        now = dt_util.utcnow()
+        if self._runtime_started_at is None:
+            self._runtime_started_at = now
+            self._runtime_warning_sent = False
+            self._persist_runtime_state()
+
+        self._cancel_runtime_timers()
+        elapsed = max(0.0, (now - self._runtime_started_at).total_seconds())
+        limit_seconds = hours * 3600
+        remaining = max(0.0, limit_seconds - elapsed)
+        self._runtime_limit_timer = async_call_later(
+            self.hass, remaining, self._max_runtime_reached
+        )
+
+        if (
+            self.config.get(CONF_NOTIFY_RUNTIME_WARNING, True)
+            and not self._runtime_warning_sent
+        ):
+            warning_after = max(
+                0.0, limit_seconds - RUNTIME_WARNING_MINUTES * 60 - elapsed
+            )
+            self._runtime_warning_timer = async_call_later(
+                self.hass, warning_after, self._max_runtime_warning
+            )
+
+    @callback
+    def _max_runtime_warning(self, _now: datetime) -> None:
+        self._runtime_warning_timer = None
+        if self._runtime_started_at is None or self.master is None or not self.master.is_on:
+            return
+        self._runtime_warning_sent = True
+        self._persist_runtime_state()
+        hours = float(self.config.get(CONF_MAX_RUNTIME_HOURS, DEFAULT_MAX_RUNTIME_HOURS))
+        self.hass.async_create_task(
+            self._notify(
+                self._msg("runtime_title"),
+                self._msg("runtime_warning", hours=f"{hours:g}"),
+            )
+        )
+
+    @callback
+    def _max_runtime_reached(self, _now: datetime) -> None:
+        self._runtime_limit_timer = None
+        if self._runtime_started_at is None or self.master is None or not self.master.is_on:
+            return
+        hours = float(self.config.get(CONF_MAX_RUNTIME_HOURS, DEFAULT_MAX_RUNTIME_HOURS))
+        remaining = hours * 3600 - (dt_util.utcnow() - self._runtime_started_at).total_seconds()
+        if remaining > 0:
+            self._runtime_limit_timer = async_call_later(
+                self.hass, remaining, self._max_runtime_reached
+            )
+            return
+        self.master.set_state_silently(False)
+        self.hass.async_create_task(self.async_master_changed(force=True))
 
     def _msg(self, key: str, **kwargs: Any) -> str:
         return _MESSAGES[self.lang][key].format(**kwargs)
@@ -471,7 +618,14 @@ class HeatingController:
         async with self._lock:
             if not self.master_on or self.boost_active:
                 return
-            target_fn = self._away_target if self.away_on else self._room_target
+            if self.away_on:
+                if not self.config.get(CONF_ENABLE_AWAY_TARGET, True):
+                    return
+                target_fn = self._away_target
+            elif self.config.get(CONF_ENABLE_MODE_APPLY, True):
+                target_fn = self._room_target
+            else:
+                return
             for room in self.rooms:
                 if not self.runtime[room.id].paused:
                     await self._apply_room(room, target_fn(room))
@@ -497,11 +651,17 @@ class HeatingController:
         if state.state != HVACMode.HEAT or _as_float(attrs.get("temperature")) != target:
             await self._send(room, HVACMode.HEAT, target)
 
-    async def async_master_changed(self) -> None:
+    async def async_master_changed(self, *, force: bool = False) -> None:
         """Master switch: heat or off for boiler and every room."""
-        if not self.master_on and self.boost_active:
+        self._sync_runtime_limit()
+        if not force and not self.config.get(CONF_ENABLE_MASTER, True):
+            return
+        heating_enabled = (
+            bool(self.master and self.master.is_on) if force else self.master_on
+        )
+        if not heating_enabled and self.boost_active:
             await self.async_stop_boost(restore=False)
-        mode = HVACMode.HEAT if self.master_on else HVACMode.OFF
+        mode = HVACMode.HEAT if heating_enabled else HVACMode.OFF
         self._mark_own_change()
         await self._set_boiler_mode(mode)
         for room in self.rooms:
@@ -514,7 +674,9 @@ class HeatingController:
             self._settle_timer = None
         if mode == HVACMode.HEAT:
             self._settle_timer = async_call_later(
-                self.hass, MASTER_SETTLE_SECONDS, self._after_master_on
+                self.hass,
+                int(self.config.get(CONF_MASTER_SETTLE_SECONDS, MASTER_SETTLE_SECONDS)),
+                self._after_master_on,
             )
 
     @callback
@@ -571,7 +733,11 @@ class HeatingController:
 
     def _sync_slider(self, room: Room, old: State, new: State) -> None:
         """A target changed on the room thermostat becomes the new comfort/eco value."""
-        if self.away_on or time.monotonic() < self._suppress_until:
+        if (
+            not self.config.get(CONF_ENABLE_SLIDER_SYNC, True)
+            or self.away_on
+            or time.monotonic() < self._suppress_until
+        ):
             return
         if new.state != HVACMode.HEAT or new.attributes.get("preset_mode") not in (None, "none"):
             return
@@ -710,7 +876,11 @@ class HeatingController:
         return any(self.hass.states.is_state(p, STATE_HOME) for p in self.persons)
 
     def _start_away_timer(self) -> None:
-        if self._away_timer or self.away_on:
+        if (
+            not self.config.get(CONF_ENABLE_PRESENCE, True)
+            or self._away_timer
+            or self.away_on
+        ):
             return
         delay = int(self.config.get(CONF_AWAY_DELAY, DEFAULT_AWAY_DELAY)) * 60
         self._away_timer = async_call_later(self.hass, delay, self._away_timeout)
@@ -718,11 +888,18 @@ class HeatingController:
     @callback
     def _away_timeout(self, _now: datetime) -> None:
         self._away_timer = None
-        if self.away is not None and not self._anyone_home() and not self.away_on:
+        if (
+            self.config.get(CONF_ENABLE_PRESENCE, True)
+            and self.away is not None
+            and not self._anyone_home()
+            and not self.away_on
+        ):
             self.hass.async_create_task(self.away.async_turn_on())
 
     @callback
     def _on_person_change(self, event: Event[EventStateChangedData]) -> None:
+        if not self.config.get(CONF_ENABLE_PRESENCE, True):
+            return
         home = self._anyone_home()
         if home == self._was_home:
             return
@@ -767,7 +944,9 @@ class HeatingController:
         if rt.verify_unsub:
             rt.verify_unsub()
         rt.verify_unsub = async_call_later(
-            self.hass, VERIFY_SECONDS, partial(self._verify, room)
+            self.hass,
+            int(self.config.get(CONF_VERIFY_SECONDS, VERIFY_SECONDS)),
+            partial(self._verify, room),
         )
 
     def _command_applied(self, room: Room) -> bool:
@@ -793,14 +972,15 @@ class HeatingController:
             rt.desired = None
             return
         rt.desired["attempts"] += 1
-        if rt.desired["attempts"] <= MAX_RETRIES:
+        max_retries = int(self.config.get(CONF_VERIFY_RETRIES, MAX_RETRIES))
+        if rt.desired["attempts"] <= max_retries:
             _LOGGER.info(
                 "%s did not apply %s, resending (%s/%s)",
-                room.climate, rt.desired, rt.desired["attempts"], MAX_RETRIES,
+                room.climate, rt.desired, rt.desired["attempts"], max_retries,
             )
             self.hass.async_create_task(self._issue(room))
             return
-        _LOGGER.warning("%s did not apply %s after %s retries", room.climate, rt.desired, MAX_RETRIES)
+        _LOGGER.warning("%s did not apply %s after %s retries", room.climate, rt.desired, max_retries)
         rt.command_failures += 1
         rt.desired = None
         async_dispatcher_send(self.hass, self.signal_diagnostics)
@@ -809,6 +989,8 @@ class HeatingController:
 
     @callback
     def _on_window_change(self, event: Event[EventStateChangedData]) -> None:
+        if not self.config.get(CONF_ENABLE_WINDOWS, True):
+            return
         room = next((r for r in self.rooms if event.data["entity_id"] in r.windows), None)
         if room is not None:
             self._schedule_contact_check(room)
@@ -818,7 +1000,9 @@ class HeatingController:
         if rt.contact_unsub:
             rt.contact_unsub()
         rt.contact_unsub = async_call_later(
-            self.hass, WINDOW_CONTACT_SECONDS, partial(self._contact_settled, room)
+            self.hass,
+            int(self.config.get(CONF_WINDOW_CONTACT_SECONDS, WINDOW_CONTACT_SECONDS)),
+            partial(self._contact_settled, room),
         )
 
     @callback
@@ -841,29 +1025,45 @@ class HeatingController:
 
     def _check_temperature_drop(self, room: Room, now: datetime, value: float) -> None:
         rt = self.runtime[room.id]
-        if rt.paused or not self.temperature_window_detection or not self.master_on:
+        if (
+            not self.config.get(CONF_ENABLE_WINDOWS, True)
+            or rt.paused
+            or not self.temperature_window_detection
+            or not self.master_on
+        ):
             return
         state = self.hass.states.get(room.climate)
         if state is None or state.state != HVACMode.HEAT:
             return
-        since = now - timedelta(minutes=WINDOW_DROP_MINUTES)
+        drop_minutes = int(self.config.get(CONF_WINDOW_DROP_MINUTES, WINDOW_DROP_MINUTES))
+        since = now - timedelta(minutes=drop_minutes)
         recent = [v for t, v in rt.readings if t >= since]
-        if recent and max(recent) - value >= WINDOW_DROP_DEGREES:
+        drop_degrees = float(self.config.get(CONF_WINDOW_DROP_DEGREES, WINDOW_DROP_DEGREES))
+        if recent and max(recent) - value >= drop_degrees:
             self.hass.async_create_task(self._pause_room(room, "temperature"))
 
     def _temperature_window_closed(self, room: Room, now: datetime) -> bool:
         rt = self.runtime[room.id]
         elapsed = now - (rt.paused_since or now)
-        if elapsed >= timedelta(minutes=WINDOW_MAX_PAUSE_MINUTES):
+        max_pause = int(
+            self.config.get(CONF_WINDOW_MAX_PAUSE_MINUTES, WINDOW_MAX_PAUSE_MINUTES)
+        )
+        if elapsed >= timedelta(minutes=max_pause):
             return True
-        if elapsed < timedelta(minutes=WINDOW_MIN_PAUSE_MINUTES):
+        min_pause = int(
+            self.config.get(CONF_WINDOW_MIN_PAUSE_MINUTES, WINDOW_MIN_PAUSE_MINUTES)
+        )
+        if elapsed < timedelta(minutes=min_pause):
             return False
-        since = now - timedelta(minutes=WINDOW_DROP_MINUTES)
+        drop_minutes = int(self.config.get(CONF_WINDOW_DROP_MINUTES, WINDOW_DROP_MINUTES))
+        since = now - timedelta(minutes=drop_minutes)
         recent = [v for t, v in rt.readings if t >= since]
         # No longer falling: the last readings are not below the oldest recent one.
         return len(recent) >= 2 and recent[-1] >= recent[0] - 0.1
 
     async def _pause_room(self, room: Room, reason: str) -> None:
+        if not self.config.get(CONF_ENABLE_WINDOWS, True):
+            return
         rt = self.runtime[room.id]
         if rt.paused:
             return
@@ -910,7 +1110,7 @@ class HeatingController:
                 changed = True
                 self.notify_temperatures()
                 self.request_apply()
-                if failed:
+                if failed and self.config.get(CONF_NOTIFY_SENSOR_FAILURE, True):
                     self.hass.async_create_task(
                         self._notify(self._msg("problem_title"), self._msg("sensor_failed", room=room.name))
                     )
@@ -919,7 +1119,7 @@ class HeatingController:
             if not_heating != rt.not_heating:
                 rt.not_heating = not_heating
                 changed = True
-                if not_heating:
+                if not_heating and self.config.get(CONF_NOTIFY_NOT_HEATING, True):
                     self.hass.async_create_task(
                         self._notify(
                             self._msg("problem_title"),
