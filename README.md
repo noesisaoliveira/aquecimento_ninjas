@@ -110,7 +110,8 @@ Depois: *Ferramentas de programador → Verificar configuração* → **reinicia
 | 4. Presença | Pessoas para o modo ausente, atraso, serviço de notificação (`notify.mobile_app_…`), notificações de janela/bateria |
 | 5. Automações | Ativar/desativar aplicação Conforto/Eco, sincronização da válvula, presença, temperatura ausente e interruptor geral; definir a duração máxima do aquecimento; ajustar intervalos e verificações |
 | 6. Janelas | Ativar/desativar a pausa e ajustar estabilização, queda de temperatura e duração da pausa |
-| 7. Painel | Criar painel, o título e o estilo (Automático / Melhorado / Padrão) |
+| 7. Horário | Manter o cartão Scheduler atual ou selecionar uma entidade Schedule existente |
+| 8. Painel | Criar painel, o título e o estilo (Automático / Melhorado / Padrão) |
 
 Para mudar depois: **Definições → Dispositivos e serviços → Aquecimento Ninjas → Configurar**.
 
@@ -127,6 +128,8 @@ As opções substituem os controlos das automações YAML `aquecimento_*`:
 | `aquecimento_bateria_fraca` | **Presença e notificações → Notificar bateria fraca**; limite percentual e hora/minuto da verificação diária |
 
 O limite de bateria predefinido é **20%**. Em **Presença e notificações**, também podes desligar notificações de janela, falha do sensor ou divisão que não aquece, sem desligar o controlo do aquecimento.
+
+Em **Horário**, escolhe *Cartão Scheduler (atual)* ou *Entidade Schedule*. Para a segunda opção, cria primeiro um helper **Schedule** no Home Assistant e seleciona-o na integração. Quando está ativo, o modo passa a **Conforto**; quando está inativo, passa a **Eco**. A vista Horário do painel mostra a entidade selecionada; os períodos semanais são editados nas definições do helper Schedule.
 
 **Duração máxima do aquecimento:** em **Automações**, define *Duração máxima do aquecimento* (por defeito `0`, desativado). Por exemplo, `2` desliga o interruptor geral após duas horas seguidas ligado. Com *Notificar 10 minutos antes do desligar automático* ativo e um serviço de notificação configurado, recebes um aviso antes de desligar. O limite e o aviso continuam corretos após reiniciar o Home Assistant.
 
@@ -218,7 +221,7 @@ Criado em `/aquecimento-ninjas`. Dois estilos (*Configurar → Painel → Estilo
 | **Padrão** | Aquecimento, Gráficos | Nada (cartões do Home Assistant) |
 | **Automático** (por omissão) | Melhorado se o Mushroom estiver instalado, senão Padrão | |
 
-\* A vista *Horário* só aparece com o Scheduler card e a integração Scheduler instalados; serve para agendar o modo Conforto/Eco.
+\* Com *Cartão Scheduler*, a vista só aparece quando o cartão e a integração Scheduler estão instalados. Com *Entidade Schedule*, a vista mostra o helper selecionado e não requer o cartão Scheduler.
 
 É um painel normal: podes editá-lo.
 - **Recriar** (substitui as alterações): *Configurar → Painel → Recriar*, ou a ação `aquecimento_ninjas.create_dashboard`.

@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "aquecimento_ninjas"
-VERSION = "1.3.1"
+VERSION = "1.4.0"
 DOCS_URL = "https://github.com/noesisaoliveira/aquecimento_ninjas"
 
 PLATFORMS: list[Platform] = [
@@ -69,10 +69,15 @@ CONF_CREATE_DASHBOARD = "create_dashboard"
 CONF_DASHBOARD_TITLE = "dashboard_title"
 CONF_DASHBOARD_STYLE = "dashboard_style"
 CONF_REGENERATE_DASHBOARD = "regenerate_dashboard"
+CONF_SCHEDULER_TYPE = "scheduler_type"
+CONF_SCHEDULE_ENTITY = "schedule_entity"
 
 STYLE_AUTO = "auto"
 STYLE_ENHANCED = "enhanced"
 STYLE_STANDARD = "standard"
+
+SCHEDULER_CARD = "scheduler_card"
+SCHEDULER_ENTITY = "schedule_entity"
 
 BOILER_EXISTING = "existing"
 BOILER_CREATE = "create"

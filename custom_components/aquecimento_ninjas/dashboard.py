@@ -22,10 +22,14 @@ from homeassistant.helpers import entity_registry as er
 from .const import (
     CONF_DASHBOARD_STYLE,
     CONF_DASHBOARD_TITLE,
+    CONF_SCHEDULE_ENTITY,
+    CONF_SCHEDULER_TYPE,
     DASHBOARD_ID,
     DASHBOARD_URL,
     DOCS_URL,
     DOMAIN,
+    SCHEDULER_CARD,
+    SCHEDULER_ENTITY,
     STYLE_AUTO,
     STYLE_STANDARD,
 )
@@ -366,6 +370,10 @@ def build_dashboard(
         views = _standard_views(c, ids, t)
     else:
         views = _enhanced_views(c, ids, t, cards)
+    if c.config.get(CONF_SCHEDULER_TYPE, SCHEDULER_CARD) == SCHEDULER_ENTITY:
+        schedule_entity = c.config.get(CONF_SCHEDULE_ENTITY)
+        if schedule_entity:
+            views.insert(1, _schedule_entity_view(schedule_entity, t))
     return {"title": t["heating"], "views": views}
 
 
@@ -652,7 +660,11 @@ def _enhanced_views(
     c: HeatingController, ids: Ids, t: dict[str, str], cards: set[str]
 ) -> list[dict[str, Any]]:
     views = [_enhanced_heating(c, ids, t)]
-    if "scheduler" in cards and ids.mode:
+    if (
+        "scheduler" in cards
+        and ids.mode
+        and c.config.get(CONF_SCHEDULER_TYPE, SCHEDULER_CARD) == SCHEDULER_CARD
+    ):
         views.append(_schedule_view(ids, t))
     views.append(_maintenance_view(c, ids, t))
     views.append(_enhanced_charts(c, ids, t, cards))
@@ -823,6 +835,26 @@ def _schedule_view(ids: Ids, t: dict[str, str]) -> dict[str, Any]:
                         "discover_existing": False,
                         "show_header_toggle": False,
                         "time_step": 5,
+                    },
+                ],
+                4,
+            )
+        ],
+    )
+
+
+def _schedule_entity_view(entity_id: str, t: dict[str, str]) -> dict[str, Any]:
+    return _view(
+        t["schedule"], "schedule", "mdi:calendar-clock",
+        [
+            _section(
+                [
+                    _heading(t["weekly_schedule"], "mdi:calendar-clock"),
+                    {
+                        "type": "tile",
+                        "entity": entity_id,
+                        "name": t["schedule"],
+                        "tap_action": {"action": "more-info"},
                     },
                 ],
                 4,

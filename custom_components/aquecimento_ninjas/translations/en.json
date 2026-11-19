@@ -101,6 +101,16 @@
           "window_max_pause_minutes": "Maximum pause after temperature drop"
         }
       },
+      "schedule": {
+        "title": "Schedule",
+        "data": {
+          "scheduler_type": "Schedule type",
+          "schedule_entity": "Schedule entity"
+        },
+        "data_description": {
+          "schedule_entity": "Select an existing Schedule helper. When active, the integration selects Comfort; when inactive, it selects Eco."
+        }
+      },
       "dashboard": {
         "title": "Dashboard",
         "description": "Creates a dashboard with the views Heating and Charts.",
@@ -137,6 +147,7 @@
           "presence": "Presence and notifications",
           "automation": "Automation behavior",
           "windows": "Window behavior",
+          "schedule": "Schedule",
           "boiler": "Boiler",
           "rooms": "Rooms",
           "dashboard": "Dashboard"
@@ -207,6 +218,13 @@
           "window_max_pause_minutes": "Maximum pause after temperature drop"
         }
       },
+      "schedule": {
+        "title": "Schedule",
+        "data": {
+          "scheduler_type": "Schedule type",
+          "schedule_entity": "Schedule entity"
+        }
+      },
       "dashboard": {
         "title": "Dashboard",
         "data": {
@@ -240,6 +258,12 @@
         "auto": "Automatic",
         "enhanced": "Enhanced (Mushroom cards)",
         "standard": "Standard (built-in cards only)"
+      }
+    },
+    "scheduler_type": {
+      "options": {
+        "scheduler_card": "Scheduler card (current)",
+        "schedule_entity": "Schedule entity (on = Comfort, off = Eco)"
       }
     }
   },

@@ -65,6 +65,8 @@ from .const import (
     CONF_ROOM_VALVES,
     CONF_ROOM_WINDOWS,
     CONF_ROOMS,
+    CONF_SCHEDULE_ENTITY,
+    CONF_SCHEDULER_TYPE,
     CONF_VERIFY_RETRIES,
     CONF_VERIFY_SECONDS,
     CONF_WINDOW_CONTACT_SECONDS,
@@ -90,6 +92,8 @@ from .const import (
     STYLE_AUTO,
     STYLE_ENHANCED,
     STYLE_STANDARD,
+    SCHEDULER_CARD,
+    SCHEDULER_ENTITY,
     WINDOW_CONTACT_SECONDS,
     WINDOW_DROP_DEGREES,
     WINDOW_DROP_MINUTES,
@@ -330,6 +334,27 @@ def _window_schema(defaults: dict[str, Any]) -> vol.Schema:
     )
 
 
+def _schedule_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_SCHEDULER_TYPE,
+                default=defaults.get(CONF_SCHEDULER_TYPE, SCHEDULER_CARD),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[SCHEDULER_CARD, SCHEDULER_ENTITY],
+                    translation_key=CONF_SCHEDULER_TYPE,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            ),
+            vol.Optional(
+                CONF_SCHEDULE_ENTITY,
+                description=_suggested(defaults, CONF_SCHEDULE_ENTITY),
+            ): _entity_selector("schedule"),
+        }
+    )
+
+
 def _dashboard_schema(defaults: dict[str, Any], with_regenerate: bool) -> vol.Schema:
     schema: dict[Any, Any] = {
         vol.Required(
@@ -400,6 +425,15 @@ def _validate_notify(hass: HomeAssistant, user_input: dict[str, Any]) -> dict[st
     if not hass.services.has_service("notify", name):
         return {CONF_NOTIFY: "notify_not_found"}
     user_input[CONF_NOTIFY] = f"notify.{name}"
+    return {}
+
+
+def _validate_schedule(user_input: dict[str, Any]) -> dict[str, str]:
+    if user_input.get(CONF_SCHEDULER_TYPE, SCHEDULER_CARD) == SCHEDULER_ENTITY:
+        if not user_input.get(CONF_SCHEDULE_ENTITY):
+            return {CONF_SCHEDULE_ENTITY: "schedule_entity_required"}
+    else:
+        user_input[CONF_SCHEDULE_ENTITY] = ""
     return {}
 
 
@@ -525,9 +559,22 @@ class AquecimentoNinjasConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_dashboard()
+            return await self.async_step_schedule()
         return self.async_show_form(
             step_id="windows", data_schema=_window_schema(self._data)
+        )
+
+    async def async_step_schedule(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            errors = _validate_schedule(user_input)
+            if not errors:
+                self._data.update(user_input)
+                return await self.async_step_dashboard()
+        return self.async_show_form(
+            step_id="schedule", data_schema=_schedule_schema(user_input or self._data), errors=errors
         )
 
     async def async_step_dashboard(
@@ -562,7 +609,9 @@ class AquecimentoNinjasOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["presence", "automation", "windows", "boiler", "rooms", "dashboard"],
+            menu_options=[
+                "presence", "automation", "windows", "schedule", "boiler", "rooms", "dashboard"
+            ],
         )
 
     async def async_step_presence(
@@ -597,6 +646,20 @@ class AquecimentoNinjasOptionsFlow(OptionsFlow):
             return self._save(user_input)
         return self.async_show_form(
             step_id="windows", data_schema=_window_schema(self._config)
+        )
+
+    async def async_step_schedule(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            errors = _validate_schedule(user_input)
+            if not errors:
+                return self._save({**user_input, CONF_REGENERATE_DASHBOARD: True})
+        return self.async_show_form(
+            step_id="schedule",
+            data_schema=_schedule_schema(user_input or self._config),
+            errors=errors,
         )
 
     async def async_step_boiler(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

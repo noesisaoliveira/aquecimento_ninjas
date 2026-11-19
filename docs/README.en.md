@@ -110,7 +110,8 @@ Then: *Developer tools → Check configuration* → **restart** → in *Settings
 | 4. Presence | People for away mode, delay, notification service (`notify.mobile_app_…`), window/battery notifications |
 | 5. Automations | Enable/disable Comfort/Eco apply, valve sync, presence, away temperature and master switch; set a maximum heating runtime and adjust verification settings |
 | 6. Windows | Enable/disable pausing and adjust debounce, temperature drop and pause duration |
-| 7. Dashboard | Create dashboard, its title and style (Automatic / Enhanced / Standard) |
+| 7. Schedule | Keep the current Scheduler card or select an existing Schedule entity |
+| 8. Dashboard | Create dashboard, its title and style (Automatic / Enhanced / Standard) |
 
 Change anything later in **Settings → Devices & services → Aquecimento Ninjas → Configure**.
 
@@ -127,6 +128,8 @@ These options replace the controls from the YAML `aquecimento_*` automations:
 | `aquecimento_bateria_fraca` | **Presence and notifications → Notify low batteries**; percentage threshold and daily check time |
 
 The default low-battery threshold is **20%**. In **Presence and notifications**, you can also turn off window, sensor-failure or not-heating alerts independently without disabling heating control.
+
+In **Schedule**, choose *Scheduler card (current)* or *Schedule entity*. For the latter, first create a Home Assistant **Schedule** helper and select it in the integration. While active, it selects **Comfort**; while inactive, it selects **Eco**. The dashboard's Schedule view shows the selected entity; edit its weekly time blocks in the Schedule helper settings.
 
 **Maximum heating runtime:** in **Automation behavior**, set *Maximum heating runtime* (default `0`, disabled). For example, `2` turns off the master heating switch after two continuous hours. With *Notify 10 minutes before automatic shutdown* enabled and a notification service configured, you receive a warning before shutdown. The limit and warning state survive Home Assistant restarts.
 
@@ -218,7 +221,7 @@ Created at `/aquecimento-ninjas`. Two styles (*Configure → Dashboard → Style
 | **Standard** | Heating, Charts | Nothing (built-in cards) |
 | **Automatic** (default) | Enhanced when Mushroom is installed, otherwise Standard | |
 
-\* The *Schedule* view appears only when the Scheduler card and the Scheduler integration are installed; it schedules the Comfort/Eco mode.
+\* With *Scheduler card*, this view appears only when the card and Scheduler integration are installed. With *Schedule entity*, it shows the selected helper and does not require the Scheduler card.
 
 It is a normal dashboard: you can edit it.
 - **Recreate** (overwrites edits): *Configure → Dashboard → Recreate*, or action `aquecimento_ninjas.create_dashboard`.

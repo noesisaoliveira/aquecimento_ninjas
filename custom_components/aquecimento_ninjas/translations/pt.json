@@ -101,6 +101,16 @@
           "window_max_pause_minutes": "Pausa máxima após queda de temperatura"
         }
       },
+      "schedule": {
+        "title": "Horário",
+        "data": {
+          "scheduler_type": "Tipo de horário",
+          "schedule_entity": "Entidade Schedule"
+        },
+        "data_description": {
+          "schedule_entity": "Seleciona um helper Schedule existente. Ativo, seleciona Conforto; inativo, seleciona Eco."
+        }
+      },
       "dashboard": {
         "title": "Painel",
         "description": "Cria um painel com as vistas Aquecimento e Gráficos.",
@@ -137,6 +147,7 @@
           "presence": "Presença e notificações",
           "automation": "Comportamento das automações",
           "windows": "Comportamento das janelas",
+          "schedule": "Horário",
           "boiler": "Caldeira",
           "rooms": "Divisões",
           "dashboard": "Painel"
@@ -207,6 +218,13 @@
           "window_max_pause_minutes": "Pausa máxima após queda de temperatura"
         }
       },
+      "schedule": {
+        "title": "Horário",
+        "data": {
+          "scheduler_type": "Tipo de horário",
+          "schedule_entity": "Entidade Schedule"
+        }
+      },
       "dashboard": {
         "title": "Painel",
         "data": {
@@ -240,6 +258,12 @@
         "auto": "Automático",
         "enhanced": "Melhorado (cartões Mushroom)",
         "standard": "Padrão (só cartões do Home Assistant)"
+      }
+    },
+    "scheduler_type": {
+      "options": {
+        "scheduler_card": "Cartão Scheduler (atual)",
+        "schedule_entity": "Entidade Schedule (ligada = Conforto, desligada = Eco)"
       }
     }
   },

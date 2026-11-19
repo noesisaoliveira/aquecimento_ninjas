@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.0 – 2026-11-19
+
+- Add a scheduler type option: the existing Scheduler card or a Home Assistant Schedule entity.
+- A selected Schedule entity maps active to Comfort and inactive to Eco; the dashboard shows the selected helper.
+
 ## 1.3.1 – 2026-11-19
 
 - Add an optional maximum heating runtime, disabled by default, with a configurable 10-minute warning notification.

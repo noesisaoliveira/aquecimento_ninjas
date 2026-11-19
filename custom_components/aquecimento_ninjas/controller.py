@@ -67,6 +67,8 @@ from .const import (
     CONF_ROOM_VALVES,
     CONF_ROOM_WINDOWS,
     CONF_ROOMS,
+    CONF_SCHEDULE_ENTITY,
+    CONF_SCHEDULER_TYPE,
     CONF_MASTER_SETTLE_SECONDS,
     CONF_VERIFY_RETRIES,
     CONF_VERIFY_SECONDS,
@@ -87,6 +89,7 @@ from .const import (
     MAX_TEMP,
     MIN_TEMP,
     MODE_COMFORT,
+    SCHEDULER_ENTITY,
     NOT_HEATING_DELTA,
     NOT_HEATING_HOURS,
     SENSOR_STALE_HOURS,
@@ -431,6 +434,18 @@ class HeatingController:
         windows = [w for r in self.rooms for w in r.windows]
         if windows and self.config.get(CONF_ENABLE_WINDOWS, True):
             track(async_track_state_change_event(hass, windows, self._on_window_change))
+
+        schedule_entity = self.config.get(CONF_SCHEDULE_ENTITY)
+        if (
+            self.config.get(CONF_SCHEDULER_TYPE) == SCHEDULER_ENTITY
+            and schedule_entity
+        ):
+            track(
+                async_track_state_change_event(
+                    hass, [schedule_entity], self._on_schedule_change
+                )
+            )
+            self._apply_schedule_state(hass.states.get(schedule_entity))
 
         batteries = [b for r in self.rooms for b in r.batteries]
         if batteries and self.config.get(CONF_NOTIFY_BATTERY, True):
@@ -912,6 +927,22 @@ class HeatingController:
                 self.hass.async_create_task(self.away.async_turn_off())
         else:
             self._start_away_timer()
+
+    @callback
+    def _on_schedule_change(self, event: Event[EventStateChangedData]) -> None:
+        self._apply_schedule_state(event.data["new_state"])
+
+    def _apply_schedule_state(self, state: State | None) -> None:
+        if state is None or self.mode is None:
+            return
+        if state.state == STATE_ON:
+            option = MODE_COMFORT
+        elif state.state == STATE_OFF:
+            option = MODE_ECO
+        else:
+            return
+        if self.mode.current_option != option:
+            self.hass.async_create_task(self.mode.async_select_option(option))
 
     # ---------- verified commands ----------
 
