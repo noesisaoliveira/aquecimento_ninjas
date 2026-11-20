@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.2 – 2026-11-20
+
+- When heating is turned on, the boiler setpoint is set to the highest room target of the current mode (Comfort or Eco); it can still be changed afterwards.
+
 ## 1.4.0 – 2026-11-19
 
 - Add a scheduler type option: the existing Scheduler card or a Home Assistant Schedule entity.

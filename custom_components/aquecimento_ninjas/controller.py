@@ -679,6 +679,8 @@ class HeatingController:
         mode = HVACMode.HEAT if heating_enabled else HVACMode.OFF
         self._mark_own_change()
         await self._set_boiler_mode(mode)
+        if mode == HVACMode.HEAT:
+            await self._set_boiler_target()
         for room in self.rooms:
             room_mode = HVACMode.OFF if self.runtime[room.id].paused else mode
             state = self.hass.states.get(room.climate)
@@ -698,6 +700,22 @@ class HeatingController:
     def _after_master_on(self, _now: datetime) -> None:
         self._settle_timer = None
         self.request_apply()
+
+    async def _set_boiler_target(self) -> None:
+        """On heating start, set the boiler to the highest room target of the current mode."""
+        if self.away_on or self.boost_active:
+            return
+        targets = [t for r in self.rooms if (t := self._room_target(r)) is not None]
+        if not targets:
+            return
+        target = max(targets)
+        if self.boiler_entity is not None:
+            await self.boiler_entity.async_set_temperature(temperature=target)
+            return
+        climate = self.boiler_climate_id
+        state = self.hass.states.get(climate) if climate else None
+        if state is not None and state.state not in _INVALID:
+            await self._call("climate", "set_temperature", climate, temperature=target)
 
     async def _set_boiler_mode(self, mode: HVACMode) -> None:
         if self.boiler_entity is not None:
