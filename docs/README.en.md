@@ -185,6 +185,8 @@ Priority (highest first):
 2. **Away mode on** → every room at the away temperature.
 3. **Mode Comfort / Eco** → every room at its comfort / eco temperature.
 
+When the master switch is turned on, the boiler thermostat is set to the **highest** comfort (or eco) temperature among the rooms. You can then change it freely on the boiler thermostat; it is only reset the next time you turn the heating on.
+
 The integration re-applies the targets on every change and every 30 minutes, removes Better Thermostat presets
 (they would override the target), and turns a room back to *heat* if the master switch is on.
 

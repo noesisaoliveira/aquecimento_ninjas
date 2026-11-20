@@ -185,6 +185,8 @@ Prioridade (a mais alta primeiro):
 2. **Modo ausente ligado** → todas as divisões na temperatura ausente.
 3. **Modo Conforto / Eco** → cada divisão na sua temperatura de conforto / eco.
 
+Ao ligar o interruptor geral, o termóstato da caldeira é definido para a temperatura de conforto (ou eco) **mais alta** entre as divisões. Depois podes alterá-la livremente no termóstato da caldeira; só é redefinida da próxima vez que ligares o aquecimento.
+
 A integração volta a aplicar os objetivos a cada alteração e a cada 30 minutos, retira os presets do Better Thermostat
 (sobrepor-se-iam ao objetivo) e volta a pôr uma divisão em *heat* se o interruptor geral estiver ligado.
 
