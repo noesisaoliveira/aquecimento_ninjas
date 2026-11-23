@@ -20,14 +20,18 @@
           "boiler_switch": "Boiler switch (relay)",
           "cold_tolerance": "Cold tolerance",
           "hot_tolerance": "Hot tolerance",
-          "min_cycle": "Minimum cycle duration"
+          "min_cycle": "Minimum cycle duration",
+          "emergency_pin": "Emergency PIN",
+          "emergency_hours": "Emergency maximum duration"
         },
         "data_description": {
           "boiler_climate": "Climate entity that fires the boiler. Set its target sensor to the 'Reference temperature' sensor of this integration.",
           "boiler_switch": "Switch that turns the boiler on. Optional for an existing thermostat (used for the statistics).",
           "cold_tolerance": "Boiler turns on when the reference temperature is this much below the target.",
           "hot_tolerance": "Boiler turns off when the reference temperature is this much above the target.",
-          "min_cycle": "Minimum time the boiler stays on or off. 5 minutes is recommended."
+          "min_cycle": "Minimum time the boiler stays on or off. 5 minutes is recommended.",
+          "emergency_pin": "Numeric PIN (4 to 8 digits) asked before the emergency button in the Maintenance panel turns the boiler on, ignoring all sensors. Empty = button disabled.",
+          "emergency_hours": "The boiler is turned off automatically after this time."
         }
       },
       "room": {
@@ -132,7 +136,8 @@
       "climate_in_use": "This Better Thermostat is already used in another room.",
       "not_better_thermostat": "Select a Better Thermostat climate entity.",
       "boiler_is_room": "The boiler thermostat cannot be a Better Thermostat room.",
-      "notify_not_found": "Notification service not found."
+      "notify_not_found": "Notification service not found.",
+      "invalid_pin": "The PIN must be 4 to 8 digits."
     },
     "abort": {
       "better_thermostat_missing": "Better Thermostat is not installed. Install it from HACS and configure your rooms first (see the documentation).",
@@ -160,7 +165,13 @@
           "boiler_switch": "Boiler switch (relay)",
           "cold_tolerance": "Cold tolerance",
           "hot_tolerance": "Hot tolerance",
-          "min_cycle": "Minimum cycle duration"
+          "min_cycle": "Minimum cycle duration",
+          "emergency_pin": "Emergency PIN",
+          "emergency_hours": "Emergency maximum duration"
+        },
+        "data_description": {
+          "emergency_pin": "Numeric PIN (4 to 8 digits) asked before the emergency button in the Maintenance panel turns the boiler on, ignoring all sensors. Empty = button disabled.",
+          "emergency_hours": "The boiler is turned off automatically after this time."
         }
       },
       "room": {
@@ -243,7 +254,8 @@
       "climate_in_use": "This Better Thermostat is already used in another room.",
       "not_better_thermostat": "Select a Better Thermostat climate entity.",
       "boiler_is_room": "The boiler thermostat cannot be a Better Thermostat room.",
-      "notify_not_found": "Notification service not found."
+      "notify_not_found": "Notification service not found.",
+      "invalid_pin": "The PIN must be 4 to 8 digits."
     }
   },
   "selector": {
@@ -268,6 +280,9 @@
     }
   },
   "entity": {
+    "alarm_control_panel": {
+      "emergency": { "name": "Emergency boiler on" }
+    },
     "binary_sensor": {
       "window_open": { "name": "{room} window open" },
       "sensor_problem": { "name": "{room} sensor problem" },
@@ -328,6 +343,9 @@
     }
   },
   "exceptions": {
-    "boost_no_rooms": { "message": "Select at least one room for the boost." }
+    "boost_no_rooms": { "message": "Select at least one room for the boost." },
+    "emergency_no_pin": { "message": "Set an emergency PIN first (Settings > Boiler)." },
+    "emergency_wrong_pin": { "message": "Wrong PIN." },
+    "emergency_locked": { "message": "Too many wrong PINs. Try again in a few minutes." }
   }
 }

@@ -106,7 +106,7 @@ class BoilerThermostat(AquecimentoEntity, ClimateEntity, RestoreEntity):
 
     @property
     def hvac_action(self) -> HVACAction:
-        if self._attr_hvac_mode == HVACMode.OFF:
+        if self._attr_hvac_mode == HVACMode.OFF and not self.controller.emergency_active:
             return HVACAction.OFF
         return HVACAction.HEATING if self._heater_on else HVACAction.IDLE
 
@@ -161,8 +161,17 @@ class BoilerThermostat(AquecimentoEntity, ClimateEntity, RestoreEntity):
             blocking=True,
         )
 
+    async def async_resync(self) -> None:
+        self.async_write_ha_state()
+        await self._async_control()
+
     async def _async_control(self) -> None:
         heater_on = self._heater_on
+        if self.controller.emergency_active:
+            # Emergency: fire the boiler no matter what the sensors say.
+            if not heater_on:
+                await self._switch(True)
+            return
         if self._attr_hvac_mode == HVACMode.OFF:
             if heater_on:
                 await self._switch(False)

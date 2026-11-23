@@ -7,13 +7,20 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from functools import partial
+import hmac
 import logging
 import time
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import HVACAction, HVACMode
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_HOME, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import (
+    STATE_HOME,
+    STATE_OFF,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+)
 from homeassistant.core import (
     CALLBACK_TYPE,
     Event,
@@ -45,6 +52,8 @@ from .const import (
     CONF_BOILER_CLIMATE,
     CONF_BOILER_MODE,
     CONF_BOILER_SWITCH,
+    CONF_EMERGENCY_HOURS,
+    CONF_EMERGENCY_PIN,
     CONF_ENABLE_AWAY_TARGET,
     CONF_ENABLE_MASTER,
     CONF_ENABLE_MODE_APPLY,
@@ -81,20 +90,25 @@ from .const import (
     DEFAULT_BATTERY_CHECK_HOUR,
     DEFAULT_BATTERY_CHECK_MINUTE,
     DEFAULT_BATTERY_THRESHOLD,
+    DEFAULT_EMERGENCY_HOURS,
     DEFAULT_MAX_RUNTIME_HOURS,
     DOMAIN,
+    EMERGENCY_LOCK_MINUTES,
+    EMERGENCY_MAX_ATTEMPTS,
     MASTER_SETTLE_SECONDS,
     RUNTIME_WARNING_MINUTES,
     MAX_RETRIES,
     MAX_TEMP,
     MIN_TEMP,
     MODE_COMFORT,
+    MODE_ECO,
     SCHEDULER_ENTITY,
     NOT_HEATING_DELTA,
     NOT_HEATING_HOURS,
     SENSOR_STALE_HOURS,
     SIGNAL_BOOST,
     SIGNAL_DIAGNOSTICS,
+    SIGNAL_EMERGENCY,
     SIGNAL_STATS,
     SIGNAL_TEMPERATURES,
     SUPPRESS_SECONDS,
@@ -278,6 +292,12 @@ class HeatingController:
         self._boost_snapshot: dict[str, Any] | None = None
         self._boost_timer: CALLBACK_TYPE | None = None
 
+        self.emergency_until: datetime | None = None
+        self._emergency_snapshot: dict[str, Any] | None = None
+        self._emergency_timer: CALLBACK_TYPE | None = None
+        self._pin_failures = 0
+        self._pin_locked_until = 0.0
+
         self.stats = BoilerStats()
         self._lock = asyncio.Lock()
         self._unsubs: list[CALLBACK_TYPE] = []
@@ -308,6 +328,10 @@ class HeatingController:
     @property
     def signal_diagnostics(self) -> str:
         return f"{SIGNAL_DIAGNOSTICS}_{self.entry.entry_id}"
+
+    @property
+    def signal_emergency(self) -> str:
+        return f"{SIGNAL_EMERGENCY}_{self.entry.entry_id}"
 
     @property
     def boost_active(self) -> bool:
@@ -407,12 +431,14 @@ class HeatingController:
             self._away_timer,
             self._settle_timer,
             self._boost_timer,
+            self._emergency_timer,
             self._runtime_warning_timer,
             self._runtime_limit_timer,
         ):
             if timer:
                 timer()
         self._away_timer = self._settle_timer = self._boost_timer = None
+        self._emergency_timer = None
         self._runtime_warning_timer = self._runtime_limit_timer = None
         for rt in self.runtime.values():
             rt.cancel_timers()
@@ -678,9 +704,10 @@ class HeatingController:
             await self.async_stop_boost(restore=False)
         mode = HVACMode.HEAT if heating_enabled else HVACMode.OFF
         self._mark_own_change()
-        await self._set_boiler_mode(mode)
-        if mode == HVACMode.HEAT:
-            await self._set_boiler_target()
+        if not self.emergency_active:
+            await self._set_boiler_mode(mode)
+            if mode == HVACMode.HEAT:
+                await self._set_boiler_target()
         for room in self.rooms:
             room_mode = HVACMode.OFF if self.runtime[room.id].paused else mode
             state = self.hass.states.get(room.climate)
@@ -745,7 +772,7 @@ class HeatingController:
     def _on_climate_change(self, event: Event[EventStateChangedData]) -> None:
         entity_id = event.data["entity_id"]
         new, old = event.data["new_state"], event.data["old_state"]
-        if new is None:
+        if new is None or self.emergency_active:
             return
         if not self.master_on:
             if new.state == HVACMode.HEAT and (old is None or old.state != HVACMode.HEAT):
@@ -897,6 +924,109 @@ class HeatingController:
     def _boost_finished(self, _now: datetime) -> None:
         self._boost_timer = None
         self.hass.async_create_task(self.async_stop_boost())
+
+    # ---------- emergency (boiler on, no sensors involved) ----------
+
+    @property
+    def emergency_active(self) -> bool:
+        return self.emergency_until is not None
+
+    @property
+    def emergency_pin(self) -> str:
+        return str(self.config.get(CONF_EMERGENCY_PIN) or "")
+
+    def check_emergency_pin(self, code: str | None) -> None:
+        """Raise unless the code is the configured PIN; lock for a while after repeated failures."""
+        if not self.emergency_pin:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="emergency_no_pin"
+            )
+        if time.monotonic() < self._pin_locked_until:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="emergency_locked"
+            )
+        if not hmac.compare_digest(str(code or "").encode(), self.emergency_pin.encode()):
+            self._pin_failures += 1
+            if self._pin_failures >= EMERGENCY_MAX_ATTEMPTS:
+                self._pin_failures = 0
+                self._pin_locked_until = time.monotonic() + EMERGENCY_LOCK_MINUTES * 60
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="emergency_wrong_pin"
+            )
+        self._pin_failures = 0
+
+    async def async_start_emergency(self) -> None:
+        """Fire the boiler regardless of temperatures, for a limited time."""
+        hours = float(self.config.get(CONF_EMERGENCY_HOURS, DEFAULT_EMERGENCY_HOURS))
+        if self.boost_active:
+            await self.async_stop_boost(restore=False)
+        climate = self.boiler_climate_id
+        if not self.emergency_active and not self.creates_boiler:
+            self._emergency_snapshot = self._climate_snapshot(climate)
+        self.emergency_until = dt_util.utcnow() + timedelta(hours=hours)
+        self._schedule_emergency_end()
+        self._mark_own_change()
+        _LOGGER.warning("Emergency heating started for %s h", f"{hours:g}")
+
+        if self.creates_boiler:
+            if self.boiler_entity is not None:
+                await self.boiler_entity.async_resync()
+        elif switch := self.boiler_switch_id:
+            # A thermostat with a dead sensor would not heat: drive the relay directly.
+            if climate:
+                await self._set_climate(climate, HVACMode.OFF, None)
+            await self._call("homeassistant", "turn_on", switch)
+        elif climate:
+            await self._set_climate(climate, HVACMode.HEAT, MAX_TEMP)
+        async_dispatcher_send(self.hass, self.signal_emergency)
+
+    async def async_stop_emergency(self) -> None:
+        """End the emergency and give the boiler back to the normal rules."""
+        if self._emergency_timer:
+            self._emergency_timer()
+            self._emergency_timer = None
+        if not self.emergency_active:
+            return
+        self.emergency_until = None
+        snapshot, self._emergency_snapshot = self._emergency_snapshot, None
+        self._mark_own_change()
+        _LOGGER.warning("Emergency heating ended")
+
+        if self.creates_boiler:
+            if self.boiler_entity is not None:
+                await self.boiler_entity.async_resync()
+        else:
+            if switch := self.boiler_switch_id:
+                await self._call("homeassistant", "turn_off", switch)
+            if climate := self.boiler_climate_id:
+                if snapshot:
+                    await self._set_climate(climate, snapshot["state"], snapshot["temperature"])
+                else:
+                    await self._set_boiler_mode(
+                        HVACMode.HEAT if self.master_on else HVACMode.OFF
+                    )
+        async_dispatcher_send(self.hass, self.signal_emergency)
+
+    def restore_emergency(self, until: datetime) -> None:
+        """Called by the emergency panel after a restart; ends it if it already expired."""
+        self.emergency_until = until
+        if until <= dt_util.utcnow():
+            self.hass.async_create_task(self.async_stop_emergency())
+        else:
+            self._schedule_emergency_end()
+
+    def _schedule_emergency_end(self) -> None:
+        if self._emergency_timer:
+            self._emergency_timer()
+        if self.emergency_until is not None:
+            self._emergency_timer = async_track_point_in_utc_time(
+                self.hass, self._emergency_finished, self.emergency_until
+            )
+
+    @callback
+    def _emergency_finished(self, _now: datetime) -> None:
+        self._emergency_timer = None
+        self.hass.async_create_task(self.async_stop_emergency())
 
     @staticmethod
     def _number(entity: HelperNumber | None, default: float) -> float:

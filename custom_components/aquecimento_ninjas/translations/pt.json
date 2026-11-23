@@ -20,14 +20,18 @@
           "boiler_switch": "Interruptor da caldeira (relé)",
           "cold_tolerance": "Tolerância a frio",
           "hot_tolerance": "Tolerância a quente",
-          "min_cycle": "Duração mínima do ciclo"
+          "min_cycle": "Duração mínima do ciclo",
+          "emergency_pin": "PIN de emergência",
+          "emergency_hours": "Duração máxima da emergência"
         },
         "data_description": {
           "boiler_climate": "Entidade climate que liga a caldeira. Define o sensor alvo dela como o sensor 'Temperatura de referência' desta integração.",
           "boiler_switch": "Interruptor que liga a caldeira. Opcional com termóstato existente (usado nas estatísticas).",
           "cold_tolerance": "A caldeira liga quando a temperatura de referência está este valor abaixo do objetivo.",
           "hot_tolerance": "A caldeira desliga quando a temperatura de referência está este valor acima do objetivo.",
-          "min_cycle": "Tempo mínimo que a caldeira fica ligada ou desligada. Recomendado: 5 minutos."
+          "min_cycle": "Tempo mínimo que a caldeira fica ligada ou desligada. Recomendado: 5 minutos.",
+          "emergency_pin": "PIN numérico (4 a 8 dígitos) pedido antes de o botão de emergência do painel Manutenção ligar a caldeira, ignorando todos os sensores. Vazio = botão desativado.",
+          "emergency_hours": "A caldeira é desligada automaticamente passado este tempo."
         }
       },
       "room": {
@@ -132,7 +136,8 @@
       "climate_in_use": "Este Better Thermostat já está noutra divisão.",
       "not_better_thermostat": "Seleciona uma entidade climate do Better Thermostat.",
       "boiler_is_room": "O termóstato da caldeira não pode ser um Better Thermostat de divisão.",
-      "notify_not_found": "Serviço de notificação não encontrado."
+      "notify_not_found": "Serviço de notificação não encontrado.",
+      "invalid_pin": "O PIN deve ter 4 a 8 dígitos."
     },
     "abort": {
       "better_thermostat_missing": "O Better Thermostat não está instalado. Instala-o pelo HACS e configura primeiro as divisões (ver documentação).",
@@ -160,7 +165,13 @@
           "boiler_switch": "Interruptor da caldeira (relé)",
           "cold_tolerance": "Tolerância a frio",
           "hot_tolerance": "Tolerância a quente",
-          "min_cycle": "Duração mínima do ciclo"
+          "min_cycle": "Duração mínima do ciclo",
+          "emergency_pin": "PIN de emergência",
+          "emergency_hours": "Duração máxima da emergência"
+        },
+        "data_description": {
+          "emergency_pin": "PIN numérico (4 a 8 dígitos) pedido antes de o botão de emergência do painel Manutenção ligar a caldeira, ignorando todos os sensores. Vazio = botão desativado.",
+          "emergency_hours": "A caldeira é desligada automaticamente passado este tempo."
         }
       },
       "room": {
@@ -243,7 +254,8 @@
       "climate_in_use": "Este Better Thermostat já está noutra divisão.",
       "not_better_thermostat": "Seleciona uma entidade climate do Better Thermostat.",
       "boiler_is_room": "O termóstato da caldeira não pode ser um Better Thermostat de divisão.",
-      "notify_not_found": "Serviço de notificação não encontrado."
+      "notify_not_found": "Serviço de notificação não encontrado.",
+      "invalid_pin": "O PIN deve ter 4 a 8 dígitos."
     }
   },
   "selector": {
@@ -268,6 +280,9 @@
     }
   },
   "entity": {
+    "alarm_control_panel": {
+      "emergency": { "name": "Emergência - ligar caldeira" }
+    },
     "binary_sensor": {
       "window_open": { "name": "{room} janela aberta" },
       "sensor_problem": { "name": "{room} problema no sensor" },
@@ -328,6 +343,9 @@
     }
   },
   "exceptions": {
-    "boost_no_rooms": { "message": "Seleciona pelo menos uma divisão para o boost." }
+    "boost_no_rooms": { "message": "Seleciona pelo menos uma divisão para o boost." },
+    "emergency_no_pin": { "message": "Define primeiro um PIN de emergência (Configurar > Caldeira)." },
+    "emergency_wrong_pin": { "message": "PIN errado." },
+    "emergency_locked": { "message": "Demasiados PINs errados. Tenta novamente dentro de alguns minutos." }
   }
 }

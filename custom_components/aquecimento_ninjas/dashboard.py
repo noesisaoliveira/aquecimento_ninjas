@@ -107,6 +107,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "paused": "Em pausa (janela)",
         "sensor_problem": "Sensor sem dados · modo de emergência",
         "not_heating": "Não chega à temperatura",
+        "emergency": "Emergência - ligar caldeira",
+        "emergency_btn": "Ligar caldeira (pede PIN)",
     },
     "en": {
         "heating": "Heating",
@@ -168,6 +170,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "paused": "Paused (window)",
         "sensor_problem": "Sensor not reporting · emergency mode",
         "not_heating": "Not reaching target",
+        "emergency": "Emergency - boiler on",
+        "emergency_btn": "Boiler on (asks for PIN)",
     },
 }
 
@@ -311,6 +315,7 @@ class Ids:
     avg_cycle: str | None = None
     boiler: str | None = None
     window_temp: str | None = None
+    emergency: str | None = None
     comfort: dict[str, str | None] = field(default_factory=dict)
     eco: dict[str, str | None] = field(default_factory=dict)
     use_for_boiler: dict[str, str | None] = field(default_factory=dict)
@@ -347,6 +352,7 @@ def _ids(hass: HomeAssistant, c: HeatingController) -> Ids:
         avg_cycle=eid("sensor", "boiler_average_cycle"),
         boiler=c.boiler_climate_id or eid("climate", "boiler"),
         window_temp=eid("switch", "window_temperature_detection"),
+        emergency=eid("alarm_control_panel", "emergency") if c.emergency_pin else None,
     )
     for room in c.rooms:
         ids.comfort[room.id] = eid("number", "comfort", room.id)
@@ -527,6 +533,15 @@ def _standard_views(c: HeatingController, ids: Ids, t: dict[str, str]) -> list[d
         heating_cards.append({"type": "thermostat", "entity": ids.boiler, "name": t["boiler"]})
     heating_cards += thermostats
     heating_cards.append(_diagnostics_entities(c, ids, t))
+    if ids.emergency:
+        heating_cards.append(
+            {
+                "type": "alarm-panel",
+                "entity": ids.emergency,
+                "name": t["emergency_btn"],
+                "states": ["arm_away"],
+            }
+        )
     if valves:
         heating_cards.append(_entities(t["valves"], valves))
     heating_cards.append(_docs_button(t))
@@ -934,6 +949,22 @@ def _maintenance_view(c: HeatingController, ids: Ids, t: dict[str, str]) -> dict
             _section(
                 [_heading(t["valves"], "mdi:valve")]
                 + [_valve_card(r, t) for r in c.rooms if r.batteries or r.windows],
+                2,
+            )
+        )
+    if ids.emergency:
+        sections.append(
+            _section(
+                [
+                    _heading(t["emergency"], "mdi:fire-alert"),
+                    {
+                        "type": "custom:mushroom-alarm-control-panel-card",
+                        "entity": ids.emergency,
+                        "name": t["emergency_btn"],
+                        "states": ["armed_away"],
+                        "grid_options": {"columns": 12},
+                    },
+                ],
                 2,
             )
         )

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.0 – 2026-11-23
+
+- Add an emergency button to the Maintenance panel that turns the boiler on regardless of any temperature sensor. It asks for a numeric PIN (4-8 digits) set in Settings > Boiler, stops by itself after a configurable time (default 2 h), and locks for 5 minutes after 5 wrong PINs. Without a PIN the button is not shown.
+- Fix the Schedule entity mode switching failing when the entity turns off (missing imports).
+
 ## 1.4.2 – 2026-11-20
 
 - When heating is turned on, the boiler setpoint is set to the highest room target of the current mode (Comfort or Eco); it can still be changed afterwards.

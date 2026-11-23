@@ -5,10 +5,11 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "aquecimento_ninjas"
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 DOCS_URL = "https://github.com/noesisaoliveira/aquecimento_ninjas"
 
 PLATFORMS: list[Platform] = [
+    Platform.ALARM_CONTROL_PANEL,
     Platform.BINARY_SENSOR,
     Platform.SWITCH,
     Platform.SELECT,
@@ -26,6 +27,8 @@ CONF_BOILER_SWITCH = "boiler_switch"
 CONF_COLD_TOLERANCE = "cold_tolerance"
 CONF_HOT_TOLERANCE = "hot_tolerance"
 CONF_MIN_CYCLE = "min_cycle"
+CONF_EMERGENCY_PIN = "emergency_pin"
+CONF_EMERGENCY_HOURS = "emergency_hours"
 
 CONF_ROOMS = "rooms"
 CONF_ROOM_ID = "id"
@@ -100,6 +103,9 @@ DEFAULT_MAX_RUNTIME_HOURS = 0.0
 DEFAULT_BOILER_TARGET = 20.0
 DEFAULT_BOOST_HOURS = 1.0
 DEFAULT_BOOST_TEMPERATURE = 23.0
+DEFAULT_EMERGENCY_HOURS = 2.0
+EMERGENCY_MAX_ATTEMPTS = 5
+EMERGENCY_LOCK_MINUTES = 5
 
 MIN_TEMP = 5.0
 MAX_TEMP = 30.0
@@ -132,4 +138,5 @@ NOT_HEATING_HOURS = 2
 SIGNAL_TEMPERATURES = f"{DOMAIN}_temperatures"
 SIGNAL_STATS = f"{DOMAIN}_stats"
 SIGNAL_BOOST = f"{DOMAIN}_boost"
+SIGNAL_EMERGENCY = f"{DOMAIN}_emergency"
 SIGNAL_DIAGNOSTICS = f"{DOMAIN}_diagnostics"

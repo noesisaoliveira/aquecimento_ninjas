@@ -39,6 +39,8 @@ from .const import (
     CONF_CREATE_DASHBOARD,
     CONF_DASHBOARD_STYLE,
     CONF_DASHBOARD_TITLE,
+    CONF_EMERGENCY_HOURS,
+    CONF_EMERGENCY_PIN,
     CONF_ENABLE_AWAY_TARGET,
     CONF_ENABLE_MASTER,
     CONF_ENABLE_MODE_APPLY,
@@ -79,6 +81,7 @@ from .const import (
     DEFAULT_BATTERY_CHECK_MINUTE,
     DEFAULT_BATTERY_THRESHOLD,
     DEFAULT_COLD_TOLERANCE,
+    DEFAULT_EMERGENCY_HOURS,
     DEFAULT_HOT_TOLERANCE,
     DEFAULT_MIN_CYCLE,
     DEFAULT_MAX_RUNTIME_HOURS,
@@ -163,6 +166,17 @@ def _user_schema(defaults: dict[str, Any]) -> vol.Schema:
 
 def _boiler_schema(mode: str, defaults: dict[str, Any]) -> vol.Schema:
     switch_selector = _entity_selector(["switch", "input_boolean"])
+    emergency = {
+        vol.Optional(
+            CONF_EMERGENCY_PIN, description=_suggested(defaults, CONF_EMERGENCY_PIN)
+        ): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+        ),
+        vol.Required(
+            CONF_EMERGENCY_HOURS,
+            default=defaults.get(CONF_EMERGENCY_HOURS, DEFAULT_EMERGENCY_HOURS),
+        ): _number_selector(0.5, 12, 0.5, "h"),
+    }
     if mode == BOILER_EXISTING:
         return vol.Schema(
             {
@@ -172,6 +186,7 @@ def _boiler_schema(mode: str, defaults: dict[str, Any]) -> vol.Schema:
                 vol.Optional(
                     CONF_BOILER_SWITCH, description=_suggested(defaults, CONF_BOILER_SWITCH)
                 ): switch_selector,
+                **emergency,
             }
         )
     return vol.Schema(
@@ -190,6 +205,7 @@ def _boiler_schema(mode: str, defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_MIN_CYCLE, default=defaults.get(CONF_MIN_CYCLE, DEFAULT_MIN_CYCLE)
             ): _number_selector(0, 30, 1, "min"),
+            **emergency,
         }
     )
 
@@ -392,6 +408,10 @@ def _validate_boiler(hass: HomeAssistant, user_input: dict[str, Any]) -> dict[st
     climate = user_input.get(CONF_BOILER_CLIMATE)
     if climate and _platform_of(hass, climate) == BETTER_THERMOSTAT_DOMAIN:
         errors[CONF_BOILER_CLIMATE] = "boiler_is_room"
+    pin = (user_input.get(CONF_EMERGENCY_PIN) or "").strip()
+    if pin and not (pin.isascii() and pin.isdigit() and 4 <= len(pin) <= 8):
+        errors[CONF_EMERGENCY_PIN] = "invalid_pin"
+    user_input[CONF_EMERGENCY_PIN] = pin
     return errors
 
 
