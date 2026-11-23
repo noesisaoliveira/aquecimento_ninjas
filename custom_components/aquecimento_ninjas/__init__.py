@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
@@ -30,8 +31,14 @@ SERVICE_START_BOOST = "start_boost"
 SERVICE_STOP_BOOST = "stop_boost"
 
 
+def _import_platforms() -> None:
+    for platform in PLATFORMS:
+        importlib.import_module(f".{platform.value}", __package__)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: AquecimentoConfigEntry) -> bool:
     """Set up the integration from a config entry."""
+    await hass.async_add_import_executor_job(_import_platforms)
     force_dashboard = False
     if entry.options.get(CONF_REGENERATE_DASHBOARD):
         force_dashboard = True

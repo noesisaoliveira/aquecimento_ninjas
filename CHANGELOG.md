@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.1 – 2026-11-23
+
+- Fix the integration failing to set up on recent Home Assistant versions (removed `STATE_ALARM_*` constants in the emergency panel).
+- Load the platform modules in the executor to avoid the blocking `import_module` warning.
+
 ## 1.5.0 – 2026-11-23
 
 - Add an emergency button to the Maintenance panel that turns the boiler on regardless of any temperature sensor. It asks for a numeric PIN (4-8 digits) set in Settings > Boiler, stops by itself after a configurable time (default 2 h), and locks for 5 minutes after 5 wrong PINs. Without a PIN the button is not shown.

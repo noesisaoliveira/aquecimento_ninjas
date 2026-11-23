@@ -9,7 +9,6 @@ from homeassistant.components.alarm_control_panel import (
     AlarmControlPanelEntityFeature,
     CodeFormat,
 )
-from homeassistant.const import STATE_ALARM_ARMED_AWAY, STATE_ALARM_DISARMED
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -48,7 +47,7 @@ class EmergencyHeating(AquecimentoEntity, AlarmControlPanelEntity, RestoreEntity
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         last = await self.async_get_last_state()
-        if last is not None and last.state == STATE_ALARM_ARMED_AWAY:
+        if last is not None and last.state == "armed_away":
             until = dt_util.parse_datetime(last.attributes.get("until") or "")
             if until is not None:
                 self.controller.restore_emergency(until)
@@ -76,11 +75,7 @@ class EmergencyHeating(AquecimentoEntity, AlarmControlPanelEntity, RestoreEntity
 
         @property
         def state(self) -> str:
-            return (
-                STATE_ALARM_ARMED_AWAY
-                if self.controller.emergency_active
-                else STATE_ALARM_DISARMED
-            )
+            return "armed_away" if self.controller.emergency_active else "disarmed"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
