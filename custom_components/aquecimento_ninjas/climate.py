@@ -142,6 +142,8 @@ class BoilerThermostat(AquecimentoEntity, ClimateEntity, RestoreEntity):
         await self._async_control()
         if self._manual_control:
             self.controller.request_apply()
+        elif self.controller.emergency_active:
+            await self.controller.async_emergency_target(float(target))
 
     @callback
     def _schedule_control(self) -> None:

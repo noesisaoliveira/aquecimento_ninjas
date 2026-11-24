@@ -90,6 +90,7 @@ from .const import (
     DEFAULT_BATTERY_CHECK_HOUR,
     DEFAULT_BATTERY_CHECK_MINUTE,
     DEFAULT_BATTERY_THRESHOLD,
+    DEFAULT_BOILER_TARGET,
     DEFAULT_EMERGENCY_HOURS,
     DEFAULT_MAX_RUNTIME_HOURS,
     DOMAIN,
@@ -690,7 +691,7 @@ class HeatingController:
     async def async_apply(self) -> None:
         """Send the right target temperature to every room thermostat."""
         async with self._lock:
-            if not self.master_on or self.boost_active:
+            if not self.master_on or self.boost_active or self.emergency_active:
                 return
             if self.away_on:
                 if not self.config.get(CONF_ENABLE_AWAY_TARGET, True):
@@ -735,6 +736,8 @@ class HeatingController:
         )
         if not heating_enabled and self.boost_active:
             await self.async_stop_boost(restore=False)
+        if not heating_enabled and self.emergency_active:
+            await self.async_stop_emergency(from_master=True)
         mode = HVACMode.HEAT if heating_enabled else HVACMode.OFF
         self._mark_own_change()
         if not self.emergency_active:
@@ -808,7 +811,14 @@ class HeatingController:
     def _on_climate_change(self, event: Event[EventStateChangedData]) -> None:
         entity_id = event.data["entity_id"]
         new, old = event.data["new_state"], event.data["old_state"]
-        if new is None or self.emergency_active:
+        if new is None:
+            return
+        if self.emergency_active:
+            if entity_id == self.boiler_climate_id and not self.creates_boiler:
+                target = _as_float(new.attributes.get("temperature"))
+                old_target = _as_float(old.attributes.get("temperature")) if old else None
+                if target is not None and target != old_target:
+                    self.hass.async_create_task(self.async_emergency_target(target))
             return
         if self.manual_mode and entity_id == self.boiler_climate_id and not self.creates_boiler:
             self._manual_boiler_changed(old, new)
@@ -1009,32 +1019,47 @@ class HeatingController:
         self._pin_failures = 0
 
     async def async_start_emergency(self) -> None:
-        """Fire the boiler regardless of temperatures, for a limited time."""
+        """Heat now: boiler on regardless of sensors, valves open to the boiler target."""
         hours = float(self.config.get(CONF_EMERGENCY_HOURS, DEFAULT_EMERGENCY_HOURS))
         if self.boost_active:
             await self.async_stop_boost(restore=False)
         climate = self.boiler_climate_id
-        if not self.emergency_active and not self.creates_boiler:
-            self._emergency_snapshot = self._climate_snapshot(climate)
+        target = self.manual_target()
+        if target is None:
+            target = DEFAULT_BOILER_TARGET
+        if not self.emergency_active:
+            self._emergency_snapshot = {
+                "master": self.master_on,
+                "boiler": None if self.creates_boiler else self._climate_snapshot(climate),
+            }
         self.emergency_until = dt_util.utcnow() + timedelta(hours=hours)
         self._schedule_emergency_end()
         self._mark_own_change()
         _LOGGER.warning("Emergency heating started for %s h", f"{hours:g}")
 
+        self._set_switch_silently(self.master, True)
+        for room in self.rooms:
+            await self._set_climate(room.climate, HVACMode.HEAT, target)
         if self.creates_boiler:
             if self.boiler_entity is not None:
+                await self.boiler_entity.async_set_hvac_mode(HVACMode.HEAT)
                 await self.boiler_entity.async_resync()
-        elif switch := self.boiler_switch_id:
-            # A thermostat with a dead sensor would not heat: drive the relay directly.
+        else:
             if climate:
-                await self._set_climate(climate, HVACMode.OFF, None)
-            await self._call("homeassistant", "turn_on", switch)
-        elif climate:
-            await self._set_climate(climate, HVACMode.HEAT, MAX_TEMP)
+                await self._set_climate(climate, HVACMode.HEAT, target)
+            if switch := self.boiler_switch_id:
+                # A thermostat with a dead sensor would not heat: drive the relay directly.
+                await self._call("homeassistant", "turn_on", switch)
         async_dispatcher_send(self.hass, self.signal_emergency)
 
-    async def async_stop_emergency(self) -> None:
-        """End the emergency and give the boiler back to the normal rules."""
+    async def async_emergency_target(self, target: float) -> None:
+        """Emergency: a new target on the boiler card goes to every valve."""
+        self._mark_own_change()
+        for room in self.rooms:
+            await self._set_climate(room.climate, HVACMode.HEAT, target)
+
+    async def async_stop_emergency(self, *, from_master: bool = False) -> None:
+        """End the emergency and give boiler and valves back to the normal rules."""
         if self._emergency_timer:
             self._emergency_timer()
             self._emergency_timer = None
@@ -1045,6 +1070,8 @@ class HeatingController:
         self._mark_own_change()
         _LOGGER.warning("Emergency heating ended")
 
+        if snapshot and not from_master:
+            self._set_switch_silently(self.master, bool(snapshot.get("master", True)))
         if self.creates_boiler:
             if self.boiler_entity is not None:
                 await self.boiler_entity.async_resync()
@@ -1052,13 +1079,20 @@ class HeatingController:
             if switch := self.boiler_switch_id:
                 await self._call("homeassistant", "turn_off", switch)
             if climate := self.boiler_climate_id:
-                if snapshot:
-                    await self._set_climate(climate, snapshot["state"], snapshot["temperature"])
+                saved = snapshot.get("boiler") if snapshot else None
+                if saved:
+                    await self._set_climate(climate, saved["state"], saved["temperature"])
                 else:
                     await self._set_boiler_mode(
                         HVACMode.HEAT if self.master_on else HVACMode.OFF
                     )
         async_dispatcher_send(self.hass, self.signal_emergency)
+        if from_master:
+            return
+        if self.master_on:
+            self.request_apply()
+        else:
+            await self.async_master_changed()
 
     def restore_emergency(self, until: datetime) -> None:
         """Called by the emergency panel after a restart; ends it if it already expired."""

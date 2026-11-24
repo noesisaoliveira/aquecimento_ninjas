@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.1 – 2026-11-24
+
+- The emergency button now also turns the heating on: the boiler shows On and every valve is sent the boiler target temperature. When it ends, heating and valves go back to what they were before. Turning the heating off during an emergency ends it.
+- During an emergency, changing the target on the boiler card sends it to every valve.
+
 ## 1.6.0 – 2026-11-24
 
 - Add a Manual mode to the mode selector: the target set on the boiler card is applied to every valve, and turning the boiler on or off on that card turns the heating on or off. Slider sync and Schedule changes are ignored while in Manual.

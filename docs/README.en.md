@@ -18,6 +18,7 @@ Up to **5 radiator valves (TRVs)**, a setup wizard, and an automatically created
 - **Boiler reference rooms** – choose which rooms the boiler thermostat reads; with two or more, it uses the average.
 - **Boiler thermostat** – use an existing one (e.g. `generic_thermostat`) or let the integration create one.
 - **Boost** – heat only the selected rooms to a boost temperature for 30 min to 6 h; the other rooms are turned off and everything is restored at the end.
+- **Emergency** – a button in the Maintenance panel that turns the heating on without looking at any temperature sensor: the boiler is switched on and the valves get the temperature of the boiler card (which you can change during the emergency). It asks for the PIN set in Settings > Boiler (4 to 8 digits; without a PIN the button is not shown), stops by itself after the maximum duration (default 2 h) and locks for 5 minutes after 5 wrong PINs. Turning it off does not ask for the PIN.
 - **Windows** – pauses the room 10 s after the window sensor opens and resumes 10 s after it closes; without a sensor, detects an open window from a fast temperature drop.
 - **Reliability** – every command to the valve is verified and resent up to 3 times; if the room sensor fails, the room switches to emergency mode (eco temperature).
 - **Diagnostics** – "room not heating", "sensor problem", failed command count and diagnostics download.
@@ -106,7 +107,7 @@ Then: *Developer tools → Check configuration* → **restart** → in *Settings
 | Step | What you choose |
 |---|---|
 | 1. Name | Name and boiler thermostat: *use existing* or *create* |
-| 2. Boiler | Existing: the climate entity (+ optional relay for statistics). Create: the relay, tolerances and minimum cycle (5 min recommended) |
+| 2. Boiler | Existing: the climate entity (+ optional relay for statistics). Create: the relay, tolerances and minimum cycle (5 min recommended); emergency PIN and maximum duration |
 | 3. Rooms | Per room: name, Better Thermostat, its valves, room sensor, optional battery and window sensors. Repeat until all rooms are added (max 5 valves) |
 | 4. Presence | People for away mode, delay, notification service (`notify.mobile_app_…`), window/battery notifications |
 | 5. Automations | Enable/disable Comfort/Eco apply, valve sync, presence, away temperature and master switch; set a maximum heating runtime and adjust verification settings |

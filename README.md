@@ -18,6 +18,7 @@ Até **5 válvulas de radiador (TRV)**, assistente de configuração e painel co
 - **Divisões de referência da caldeira** – escolhes que divisões a caldeira lê; com duas ou mais usa a média.
 - **Termóstato da caldeira** – usa um existente (ex.: `generic_thermostat`) ou a integração cria um.
 - **Boost** – aquece só as divisões escolhidas até uma temperatura de boost durante 30 min a 6 h; as outras divisões ficam desligadas e no fim tudo é reposto.
+- **Emergência** – botão no painel Manutenção que liga o aquecimento sem olhar aos sensores de temperatura: a caldeira fica ligada e as válvulas recebem a temperatura do cartão da caldeira (que podes alterar durante a emergência). Pede o PIN definido em Configurar > Caldeira (4 a 8 dígitos; sem PIN o botão não aparece), termina sozinho ao fim da duração máxima (por omissão 2 h) e bloqueia 5 minutos após 5 PINs errados. Desligar não pede PIN.
 - **Janelas** – pausa a divisão 10 s depois de o sensor de janela abrir e retoma 10 s depois de fechar; sem sensor, deteta a janela aberta por uma queda rápida de temperatura.
 - **Fiabilidade** – cada comando à válvula é confirmado e reenviado até 3 vezes; se o sensor da divisão falhar, a divisão passa a modo de emergência (temperatura eco).
 - **Diagnóstico** – "divisão não aquece", "sensor parado", contagem de comandos falhados e descarga de diagnóstico.
@@ -106,7 +107,7 @@ Depois: *Ferramentas de programador → Verificar configuração* → **reinicia
 | Passo | O que escolhes |
 |---|---|
 | 1. Nome | Nome e termóstato da caldeira: *usar existente* ou *criar* |
-| 2. Caldeira | Existente: a entidade climate (+ relé opcional para estatísticas). Criar: o relé, tolerâncias e ciclo mínimo (recomendado 5 min) |
+| 2. Caldeira | Existente: a entidade climate (+ relé opcional para estatísticas). Criar: o relé, tolerâncias e ciclo mínimo (recomendado 5 min); PIN e duração máxima da emergência |
 | 3. Divisões | Por divisão: nome, Better Thermostat, as válvulas, sensor da divisão, sensores de bateria e janela (opcionais). Repete até ter todas (máx. 5 válvulas) |
 | 4. Presença | Pessoas para o modo ausente, atraso, serviço de notificação (`notify.mobile_app_…`), notificações de janela/bateria |
 | 5. Automações | Ativar/desativar aplicação Conforto/Eco, sincronização da válvula, presença, temperatura ausente e interruptor geral; definir a duração máxima do aquecimento; ajustar intervalos e verificações |
