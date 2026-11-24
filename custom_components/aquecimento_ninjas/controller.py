@@ -102,6 +102,7 @@ from .const import (
     MIN_TEMP,
     MODE_COMFORT,
     MODE_ECO,
+    MODE_MANUAL,
     SCHEDULER_ENTITY,
     NOT_HEATING_DELTA,
     NOT_HEATING_HOURS,
@@ -379,6 +380,36 @@ class HeatingController:
     def comfort_mode(self) -> bool:
         return bool(self.mode and self.mode.current_option == MODE_COMFORT)
 
+    @property
+    def manual_mode(self) -> bool:
+        return bool(self.mode and self.mode.current_option == MODE_MANUAL)
+
+    def manual_target(self) -> float | None:
+        """Manual mode: the target set on the boiler card applies to every room."""
+        if self.boiler_entity is not None:
+            return self.boiler_entity.target_temperature
+        climate = self.boiler_climate_id
+        state = self.hass.states.get(climate) if climate else None
+        return _as_float(state.attributes.get("temperature")) if state else None
+
+    async def async_manual_power(self, on: bool) -> None:
+        """Manual mode: turning the boiler card on or off drives the heating switch."""
+        if self.master is None or not self.config.get(CONF_ENABLE_MASTER, True):
+            return
+        if on:
+            await self.master.async_turn_on()
+        else:
+            await self.master.async_turn_off()
+
+    @callback
+    def mode_changed(self, previous: str) -> None:
+        self.hass.async_create_task(self._async_mode_changed(previous))
+
+    async def _async_mode_changed(self, previous: str) -> None:
+        if previous == MODE_MANUAL and self.master_on:
+            await self._set_boiler_target()
+        await self.async_apply()
+
     def room_by_climate(self, entity_id: str) -> Room | None:
         return next((r for r in self.rooms if r.climate == entity_id), None)
 
@@ -646,6 +677,8 @@ class HeatingController:
         self.request_apply()
 
     def _room_target(self, room: Room) -> float | None:
+        if self.manual_mode:
+            return self.manual_target()
         # Emergency mode: without a trustworthy room sensor keep the room at eco.
         use_eco = not self.comfort_mode or self.runtime[room.id].sensor_failed
         number = (self.eco if use_eco else self.comfort).get(room.id)
@@ -733,7 +766,7 @@ class HeatingController:
 
     async def _set_boiler_target(self) -> None:
         """On heating start, set the boiler to the highest room target of the current mode."""
-        if self.away_on or self.boost_active:
+        if self.away_on or self.boost_active or self.manual_mode:
             return
         targets = [t for r in self.rooms if (t := self._room_target(r)) is not None]
         if not targets:
@@ -777,6 +810,9 @@ class HeatingController:
         new, old = event.data["new_state"], event.data["old_state"]
         if new is None or self.emergency_active:
             return
+        if self.manual_mode and entity_id == self.boiler_climate_id and not self.creates_boiler:
+            self._manual_boiler_changed(old, new)
+            return
         if not self.master_on:
             if new.state == HVACMode.HEAT and (old is None or old.state != HVACMode.HEAT):
                 self.hass.async_create_task(
@@ -794,10 +830,24 @@ class HeatingController:
             return
         self._sync_slider(room, old, new)
 
+    @callback
+    def _manual_boiler_changed(self, old: State | None, new: State) -> None:
+        """Manual mode with an existing boiler climate: it drives the heating and the targets."""
+        if new.state in _INVALID or self.boost_active:
+            return
+        if old is None or old.state != new.state:
+            want_on = new.state == HVACMode.HEAT
+            if self.master is not None and want_on != self.master.is_on:
+                self.hass.async_create_task(self.async_manual_power(want_on))
+        old_target = _as_float(old.attributes.get("temperature")) if old else None
+        if _as_float(new.attributes.get("temperature")) != old_target:
+            self.request_apply()
+
     def _sync_slider(self, room: Room, old: State, new: State) -> None:
         """A target changed on the room thermostat becomes the new comfort/eco value."""
         if (
             not self.config.get(CONF_ENABLE_SLIDER_SYNC, True)
+            or self.manual_mode
             or self.away_on
             or time.monotonic() < self._suppress_until
         ):
@@ -1084,7 +1134,7 @@ class HeatingController:
         self._apply_schedule_state(event.data["new_state"])
 
     def _apply_schedule_state(self, state: State | None) -> None:
-        if state is None or self.mode is None:
+        if state is None or self.mode is None or self.manual_mode:
             return
         if state.state == STATE_ON:
             option = MODE_COMFORT

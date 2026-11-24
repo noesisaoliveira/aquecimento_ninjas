@@ -11,6 +11,7 @@ Até **5 válvulas de radiador (TRV)**, assistente de configuração e painel co
 
 - **Interruptor geral** – liga/desliga a caldeira e todas as divisões. *Desligado* tem prioridade sobre tudo.
 - **Modo Conforto / Eco** – um seletor para a casa toda; cada divisão tem a sua temperatura de conforto e eco.
+- **Modo Manual** – no seletor de modo, a temperatura definida no cartão da caldeira passa a ser o objetivo de todas as válvulas, e ligar/desligar a caldeira nesse cartão liga/desliga o aquecimento. Os horários não mudam o modo enquanto estiver em Manual.
 - **Mudar no termóstato = novo valor** – mudar o objetivo de uma divisão no cartão do termóstato (ou no botão da
   válvula) guarda-o como temperatura de conforto ou eco dessa divisão.
 - **Modo ausente** – automático quando todos estão fora durante um tempo configurável, ou manual; usa uma temperatura ausente.

@@ -114,7 +114,14 @@ class BoilerThermostat(AquecimentoEntity, ClimateEntity, RestoreEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         return {"rooms": ", ".join(self.controller.reference()[1])}
 
+    @property
+    def _manual_control(self) -> bool:
+        c = self.controller
+        return c.manual_mode and not c.boost_active and not c.emergency_active
+
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        if self._manual_control:
+            await self.controller.async_manual_power(hvac_mode == HVACMode.HEAT)
         if hvac_mode == HVACMode.HEAT and not self.controller.master_on:
             hvac_mode = HVACMode.OFF
         self._attr_hvac_mode = hvac_mode
@@ -133,6 +140,8 @@ class BoilerThermostat(AquecimentoEntity, ClimateEntity, RestoreEntity):
         self._attr_target_temperature = float(target)
         self.async_write_ha_state()
         await self._async_control()
+        if self._manual_control:
+            self.controller.request_apply()
 
     @callback
     def _schedule_control(self) -> None:

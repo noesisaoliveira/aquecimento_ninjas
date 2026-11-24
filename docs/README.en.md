@@ -11,6 +11,7 @@ Up to **5 radiator valves (TRVs)**, a setup wizard, and an automatically created
 
 - **Master switch** – turns the boiler and every room on/off. *Off* has priority over everything.
 - **Comfort / Eco mode** – one selector for the whole house; each room has its own comfort and eco temperature.
+- **Manual mode** – in the mode selector, the temperature set on the boiler card becomes the target of all valves, and turning the boiler on/off on that card turns the heating on/off. Schedules do not change the mode while it is Manual.
 - **Change on the thermostat = new setting** – changing a room's target on its thermostat card (or the valve knob)
   saves it as that room's comfort or eco temperature.
 - **Away mode** – automatic when everyone has been away for a configurable time, or manual; uses an away temperature.

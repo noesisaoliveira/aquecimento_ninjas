@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "aquecimento_ninjas"
-VERSION = "1.5.3"
+VERSION = "1.6.0"
 DOCS_URL = "https://github.com/noesisaoliveira/aquecimento_ninjas"
 
 PLATFORMS: list[Platform] = [
@@ -87,6 +87,7 @@ BOILER_CREATE = "create"
 
 MODE_ECO = "eco"
 MODE_COMFORT = "comfort"
+MODE_MANUAL = "manual"
 
 DEFAULT_NAME = "Aquecimento"
 DEFAULT_COMFORT = 20.0

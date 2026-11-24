@@ -299,7 +299,7 @@
     "select": {
       "mode": {
         "name": "Modo",
-        "state": { "eco": "Eco", "comfort": "Conforto" }
+        "state": { "eco": "Eco", "comfort": "Conforto", "manual": "Manual" }
       }
     },
     "number": {

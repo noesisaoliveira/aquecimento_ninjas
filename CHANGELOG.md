@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0 – 2026-11-24
+
+- Add a Manual mode to the mode selector: the target set on the boiler card is applied to every valve, and turning the boiler on or off on that card turns the heating on or off. Slider sync and Schedule changes are ignored while in Manual.
+
 ## 1.5.3 – 2026-11-24
 
 - Turning the emergency boiler off no longer asks for the PIN; only turning it on does.
