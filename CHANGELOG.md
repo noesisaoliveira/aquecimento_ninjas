@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.3 – 2026-11-24
+
+- Turning the emergency boiler off no longer asks for the PIN; only turning it on does.
+- The emergency maximum duration can be set down to 0.1 h in steps of 0.1 h.
+
 ## 1.5.2 – 2026-11-24
 
 - Turning the heating on no longer waits for the boiler minimum cycle (up to 5 minutes) before switching the boiler on.

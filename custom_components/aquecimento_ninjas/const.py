@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "aquecimento_ninjas"
-VERSION = "1.5.2"
+VERSION = "1.5.3"
 DOCS_URL = "https://github.com/noesisaoliveira/aquecimento_ninjas"
 
 PLATFORMS: list[Platform] = [

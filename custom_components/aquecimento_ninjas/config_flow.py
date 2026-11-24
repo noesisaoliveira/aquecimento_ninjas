@@ -175,7 +175,7 @@ def _boiler_schema(mode: str, defaults: dict[str, Any]) -> vol.Schema:
         vol.Required(
             CONF_EMERGENCY_HOURS,
             default=defaults.get(CONF_EMERGENCY_HOURS, DEFAULT_EMERGENCY_HOURS),
-        ): _number_selector(0.5, 12, 0.5, "h"),
+        ): _number_selector(0.1, 12, 0.1, "h"),
     }
     if mode == BOILER_EXISTING:
         return vol.Schema(

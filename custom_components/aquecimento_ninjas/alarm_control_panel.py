@@ -37,7 +37,6 @@ class EmergencyHeating(AquecimentoEntity, AlarmControlPanelEntity, RestoreEntity
     """Armed = boiler forced on. Arming asks for the PIN set in the configuration."""
 
     _attr_icon = "mdi:fire-alert"
-    _attr_code_format = CodeFormat.NUMBER
     _attr_code_arm_required = True
     _attr_supported_features = AlarmControlPanelEntityFeature.ARM_AWAY
 
@@ -60,6 +59,12 @@ class EmergencyHeating(AquecimentoEntity, AlarmControlPanelEntity, RestoreEntity
     @callback
     def _changed(self) -> None:
         self.async_write_ha_state()
+
+    @property
+    def code_format(self) -> CodeFormat | None:
+        # The frontend only shows the keypad when a code format is set: ask for the PIN to
+        # turn the boiler on, not to turn it off.
+        return None if self.controller.emergency_active else CodeFormat.NUMBER
 
     if AlarmControlPanelState is not None:
 
