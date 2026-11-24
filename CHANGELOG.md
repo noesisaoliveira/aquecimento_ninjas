@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.2 – 2026-11-24
+
+- Turning the heating on no longer waits for the boiler minimum cycle (up to 5 minutes) before switching the boiler on.
+
 ## 1.5.1 – 2026-11-23
 
 - Fix the integration failing to set up on recent Home Assistant versions (removed `STATE_ALARM_*` constants in the emergency panel).

@@ -161,11 +161,11 @@ class BoilerThermostat(AquecimentoEntity, ClimateEntity, RestoreEntity):
             blocking=True,
         )
 
-    async def async_resync(self) -> None:
+    async def async_resync(self, skip_cycle: bool = False) -> None:
         self.async_write_ha_state()
-        await self._async_control()
+        await self._async_control(skip_cycle)
 
-    async def _async_control(self) -> None:
+    async def _async_control(self, skip_cycle: bool = False) -> None:
         heater_on = self._heater_on
         if self.controller.emergency_active:
             # Emergency: fire the boiler no matter what the sensors say.
@@ -183,9 +183,11 @@ class BoilerThermostat(AquecimentoEntity, ClimateEntity, RestoreEntity):
             if heater_on:
                 await self._switch(False)
             return
-        if target is None or not self._cycle_elapsed():
+        if target is None:
             return
         if heater_on and current >= target + self._hot:
-            await self._switch(False)
+            if self._cycle_elapsed():
+                await self._switch(False)
         elif not heater_on and current <= target - self._cold:
-            await self._switch(True)
+            if skip_cycle or self._cycle_elapsed():
+                await self._switch(True)

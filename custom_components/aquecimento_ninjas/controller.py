@@ -708,6 +708,9 @@ class HeatingController:
             await self._set_boiler_mode(mode)
             if mode == HVACMode.HEAT:
                 await self._set_boiler_target()
+                if self.boiler_entity is not None:
+                    # Heating was just turned on: do not wait for the minimum cycle.
+                    await self.boiler_entity.async_resync(skip_cycle=True)
         for room in self.rooms:
             room_mode = HVACMode.OFF if self.runtime[room.id].paused else mode
             state = self.hass.states.get(room.climate)
