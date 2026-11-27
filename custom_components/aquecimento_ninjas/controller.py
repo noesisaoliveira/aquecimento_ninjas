@@ -843,6 +843,8 @@ class HeatingController:
         new, old = event.data["new_state"], event.data["old_state"]
         if new is None:
             return
+        if (confirmed_room := self.room_by_climate(entity_id)) is not None:
+            self._confirm_if_applied(confirmed_room)
         if self.emergency_active:
             if entity_id == self.boiler_climate_id and not self.creates_boiler:
                 target = _as_float(new.attributes.get("temperature"))
@@ -1264,6 +1266,20 @@ class HeatingController:
         if target is not None and mode != HVACMode.OFF:
             return _as_float(state.attributes.get("temperature")) == target
         return True
+
+    @callback
+    def _confirm_if_applied(self, room: Room) -> None:
+        """Do not wait for the verification timer once the thermostat shows the request."""
+        rt = self.runtime[room.id]
+        if not rt.desired or not self._command_applied(room):
+            return
+        rt.desired = None
+        if rt.verify_unsub:
+            rt.verify_unsub()
+            rt.verify_unsub = None
+        if rt.last_command_at is not None:
+            rt.last_confirmed_at = dt_util.utcnow()
+            async_dispatcher_send(self.hass, self.signal_diagnostics)
 
     @callback
     def _verify(self, room: Room, _now: datetime) -> None:

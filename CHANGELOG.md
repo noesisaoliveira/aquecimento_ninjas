@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.2 – 2026-11-27
+
+- A command to a room thermostat is now confirmed as soon as the thermostat shows the requested mode and temperature, instead of waiting for the verification delay (the retry check is unchanged).
+
 ## 1.7.1 – 2026-11-27
 
 - Valve communication in the Maintenance panel: each room shows when the last command was sent to its thermostat (and whether it was confirmed) and when each of its valves last reported to Home Assistant. New diagnostic sensor "<room> last command". Rooms without battery or window sensors now also appear in that section.
