@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.1 – 2026-11-27
+
+- Valve communication in the Maintenance panel: each room shows when the last command was sent to its thermostat (and whether it was confirmed) and when each of its valves last reported to Home Assistant. New diagnostic sensor "<room> last command". Rooms without battery or window sensors now also appear in that section.
+- The same section also shows, per room, the target the rules ask for and why (comfort, eco, manual, away, boost, window paused, sensor not reporting...), the room sensor reading and age, and the thermostat state, to explain valves that go idle before the room reaches the target.
+
 ## 1.7.0 – 2026-11-27
 
 - Fix the "Boiler - hours on per day" chart repeating the previous day's value on the day after: the on-time sensor is now a resetting total and the chart shows each day's own hours. Recreate the dashboard to update the chart; Home Assistant may ask to reset the old statistics of the sensor (Settings > Repairs).

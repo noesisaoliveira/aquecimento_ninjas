@@ -15,7 +15,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import AquecimentoConfigEntry
-from .const import NOT_HEATING_DELTA, NOT_HEATING_HOURS, SENSOR_STALE_HOURS
+from .const import NOT_HEATING_DELTA, NOT_HEATING_HOURS
 from .controller import HeatingController, Room, RoomRuntime
 from .entity import AquecimentoEntity
 
@@ -40,7 +40,7 @@ async def async_setup_entry(
                 lambda rt: rt.sensor_failed,
                 lambda rt: {
                     "hours_since_update": rt.sensor_age_hours,
-                    "limit_hours": SENSOR_STALE_HOURS,
+                    "limit_hours": c.sensor_stale_hours,
                     "emergency_mode": rt.sensor_failed,
                 },
             ),

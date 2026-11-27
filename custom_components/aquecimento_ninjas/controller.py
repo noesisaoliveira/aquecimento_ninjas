@@ -196,6 +196,9 @@ class RoomRuntime:
     desired: dict[str, Any] | None = None
     verify_unsub: CALLBACK_TYPE | None = None
     command_failures: int = 0
+    last_command_at: datetime | None = None
+    last_command: dict[str, Any] | None = None
+    last_confirmed_at: datetime | None = None
     paused: bool = False
     pause_reason: str | None = None
     paused_since: datetime | None = None
@@ -332,6 +335,11 @@ class HeatingController:
     @property
     def signal_diagnostics(self) -> str:
         return f"{SIGNAL_DIAGNOSTICS}_{self.entry.entry_id}"
+
+    @property
+    def sensor_stale_hours(self) -> float:
+        slow = self.config.get(CONF_SLOW_SENSORS, False)
+        return SLOW_SENSOR_STALE_HOURS if slow else SENSOR_STALE_HOURS
 
     @property
     def signal_emergency(self) -> str:
@@ -689,6 +697,26 @@ class HeatingController:
 
     def _away_target(self, room: Room) -> float | None:
         return self.away_temperature.native_value if self.away_temperature else None
+
+    def room_plan(self, room: Room) -> tuple[float | None, str]:
+        """Target the rules want for a room right now, and the reason (for diagnostics)."""
+        if self.emergency_active:
+            return self.manual_target(), "emergency"
+        if self.runtime[room.id].paused:
+            return None, "window"
+        if not self.master_on:
+            return None, "off"
+        if self.boost_active:
+            if self.boost_selected(room):
+                return self._number(self.boost_temperature, 23), "boost"
+            return None, "boost_off"
+        if self.away_on:
+            return self._away_target(room), "away"
+        if self.manual_mode:
+            return self.manual_target(), "manual"
+        if self.runtime[room.id].sensor_failed:
+            return self._room_target(room), "sensor_failed"
+        return self._room_target(room), "comfort" if self.comfort_mode else "eco"
 
     async def async_apply(self) -> None:
         """Send the right target temperature to every room thermostat."""
@@ -1203,12 +1231,19 @@ class HeatingController:
             return
         self._mark_own_change()
         mode = desired.get("hvac_mode")
+        sent = False
         if mode and state.state != mode:
             await self._call("climate", "set_hvac_mode", room.climate, hvac_mode=mode)
+            sent = True
         target = desired.get("temperature")
         if target is not None and mode != HVACMode.OFF:
             if _as_float(state.attributes.get("temperature")) != target or state.state != mode:
                 await self._call("climate", "set_temperature", room.climate, temperature=target)
+                sent = True
+        if sent:
+            rt.last_command_at = dt_util.utcnow()
+            rt.last_command = {"hvac_mode": mode, "temperature": target}
+            async_dispatcher_send(self.hass, self.signal_diagnostics)
         if rt.verify_unsub:
             rt.verify_unsub()
         rt.verify_unsub = async_call_later(
@@ -1238,6 +1273,9 @@ class HeatingController:
             return
         if self._command_applied(room):
             rt.desired = None
+            if rt.last_command_at is not None:
+                rt.last_confirmed_at = dt_util.utcnow()
+                async_dispatcher_send(self.hass, self.signal_diagnostics)
             return
         rt.desired["attempts"] += 1
         max_retries = int(self.config.get(CONF_VERIFY_RETRIES, MAX_RETRIES))
@@ -1367,11 +1405,7 @@ class HeatingController:
     def _diagnostics_tick(self, now: datetime) -> None:
         now = dt_util.utcnow()
         changed = False
-        stale_hours = (
-            SLOW_SENSOR_STALE_HOURS
-            if self.config.get(CONF_SLOW_SENSORS, False)
-            else SENSOR_STALE_HOURS
-        )
+        stale_hours = self.sensor_stale_hours
         for room in self.rooms:
             rt = self.runtime[room.id]
             state = self.hass.states.get(room.sensor)

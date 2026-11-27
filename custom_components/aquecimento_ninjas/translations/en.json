@@ -321,7 +321,8 @@
       "boiler_on_time": { "name": "Boiler on today" },
       "boiler_cycles": { "name": "Boiler cycles today" },
       "boiler_average_cycle": { "name": "Boiler average cycle" },
-      "boost_end": { "name": "Boost ends" }
+      "boost_end": { "name": "Boost ends" },
+      "last_command": { "name": "{room} last command" }
     },
     "climate": {
       "boiler": { "name": "Boiler" }

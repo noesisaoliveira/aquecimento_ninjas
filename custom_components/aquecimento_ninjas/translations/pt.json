@@ -321,7 +321,8 @@
       "boiler_on_time": { "name": "Caldeira ligada hoje" },
       "boiler_cycles": { "name": "Ciclos da caldeira hoje" },
       "boiler_average_cycle": { "name": "Duração média do ciclo" },
-      "boost_end": { "name": "Fim do boost" }
+      "boost_end": { "name": "Fim do boost" },
+      "last_command": { "name": "{room} último comando" }
     },
     "climate": {
       "boiler": { "name": "Caldeira" }

@@ -21,7 +21,7 @@ Até **5 válvulas de radiador (TRV)**, assistente de configuração e painel co
 - **Emergência** – botão no painel Manutenção que liga o aquecimento sem olhar aos sensores de temperatura: a caldeira fica ligada e as válvulas recebem a temperatura do cartão da caldeira (que podes alterar durante a emergência). Pede o PIN definido em Configurar > Caldeira (4 a 8 dígitos; sem PIN o botão não aparece), termina sozinho ao fim da duração máxima (por omissão 2 h) e bloqueia 5 minutos após 5 PINs errados. Desligar não pede PIN.
 - **Janelas** – pausa a divisão 10 s depois de o sensor de janela abrir e retoma 10 s depois de fechar; sem sensor, deteta a janela aberta por uma queda rápida de temperatura.
 - **Fiabilidade** – cada comando à válvula é confirmado e reenviado até 3 vezes; se o sensor da divisão falhar, a divisão passa a modo de emergência (temperatura eco).
-- **Diagnóstico** – "divisão não aquece", "sensor parado", contagem de comandos falhados e descarga de diagnóstico.
+- **Diagnóstico** – "divisão não aquece", "sensor parado", contagem de comandos falhados e descarga de diagnóstico. No painel Manutenção, por divisão: o objetivo pedido e o motivo, a leitura do sensor, o estado do termóstato, o último comando enviado e a última resposta de cada válvula.
 - **Notificações** – janelas abertas, bateria fraca, sensor parado e divisão que não aquece.
 - **Estatísticas** – média, mínima, máxima, diferença entre divisões, horas/ciclos da caldeira hoje.
 - **Painel** – criado automaticamente: Aquecimento, Horário, Manutenção e Gráficos (estilo Melhorado) ou Aquecimento e Gráficos (estilo Padrão).

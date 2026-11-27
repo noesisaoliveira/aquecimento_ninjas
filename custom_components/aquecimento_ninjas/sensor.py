@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -11,14 +12,15 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfTemperature, UnitOfTime
+from homeassistant.const import EntityCategory, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from . import AquecimentoConfigEntry
-from .controller import HeatingController
+from .controller import HeatingController, Room
 from .entity import AquecimentoEntity
 
 
@@ -59,6 +61,7 @@ async def async_setup_entry(
             BoilerCyclesSensor(c),
             BoilerAverageCycleSensor(c),
             BoostEndSensor(c),
+            *[LastCommandSensor(c, room) for room in c.rooms],
         ]
     )
 
@@ -202,6 +205,50 @@ class BoilerAverageCycleSensor(_StatsBase):
 
     def _value(self) -> float:
         return self.controller.stats.average_cycle_minutes
+
+
+class LastCommandSensor(AquecimentoEntity, SensorEntity):
+    """When the last command was sent to a room's thermostat, and whether it was confirmed."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:send-clock"
+
+    def __init__(self, controller: HeatingController, room: Room) -> None:
+        super().__init__(controller, "last_command", room)
+        self._room = room
+        self._runtime = controller.runtime[room.id]
+
+    @property
+    def native_value(self) -> Any:
+        return self._runtime.last_command_at
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        rt = self._runtime
+        sent, confirmed = rt.last_command_at, rt.last_confirmed_at
+        plan_target, plan_reason = self.controller.room_plan(self._room)
+        return {
+            **(rt.last_command or {}),
+            "confirmed_at": confirmed,
+            "pending": sent is not None and (confirmed is None or confirmed < sent),
+            "command_failures": rt.command_failures,
+            "plan_target": plan_target,
+            "plan_reason": plan_reason,
+        }
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, self.controller.signal_diagnostics, self.async_write_ha_state
+            )
+        )
+        self.async_on_remove(
+            async_track_time_interval(
+                self.hass, lambda _now: self.async_write_ha_state(), timedelta(minutes=1)
+            )
+        )
 
 
 class BoostEndSensor(AquecimentoEntity, SensorEntity):

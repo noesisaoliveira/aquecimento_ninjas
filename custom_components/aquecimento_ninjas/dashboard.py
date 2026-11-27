@@ -81,7 +81,24 @@ TEXTS: dict[str, dict[str, str]] = {
         "docs": "Documentação",
         "docs_sub": "Abrir no GitHub",
         "weekly_schedule": "Horário semanal",
-        "valves": "Válvulas - bateria e janelas",
+        "valves": "Válvulas - comunicação, bateria e janelas",
+        "last_cmd": "Último comando",
+        "plan": "Objetivo",
+        "sensor": "Sensor",
+        "thermostat": "Termóstato",
+        "r_comfort": "Conforto",
+        "r_eco": "Eco",
+        "r_manual": "Manual",
+        "r_away": "Ausente",
+        "r_boost": "Boost",
+        "r_boost_off": "Boost (divisão desligada)",
+        "r_window": "Janela aberta (em pausa)",
+        "r_off": "Aquecimento desligado",
+        "r_sensor_failed": "Sensor sem dados (eco)",
+        "r_emergency": "Emergência",
+        "ago": "atrás",
+        "never": "nunca",
+        "unconfirmed": "sem confirmação",
         "window_open": "Janela aberta",
         "window_closed": "Janela fechada",
         "summary": "Resumo",
@@ -144,7 +161,24 @@ TEXTS: dict[str, dict[str, str]] = {
         "docs": "Documentation",
         "docs_sub": "Open on GitHub",
         "weekly_schedule": "Weekly schedule",
-        "valves": "Valves - battery and windows",
+        "valves": "Valves - communication, battery and windows",
+        "last_cmd": "Last command",
+        "plan": "Target",
+        "sensor": "Sensor",
+        "thermostat": "Thermostat",
+        "r_comfort": "Comfort",
+        "r_eco": "Eco",
+        "r_manual": "Manual",
+        "r_away": "Away",
+        "r_boost": "Boost",
+        "r_boost_off": "Boost (room off)",
+        "r_window": "Window open (paused)",
+        "r_off": "Heating off",
+        "r_sensor_failed": "Sensor not reporting (eco)",
+        "r_emergency": "Emergency",
+        "ago": "ago",
+        "never": "never",
+        "unconfirmed": "unconfirmed",
         "window_open": "Window open",
         "window_closed": "Window closed",
         "summary": "Summary",
@@ -174,6 +208,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "emergency_btn": "Boiler on (asks for PIN)",
     },
 }
+
+
+_REASONS = (
+    "comfort", "eco", "manual", "away", "boost", "boost_off",
+    "window", "off", "sensor_failed", "emergency",
+)
 
 
 # ---------- Lovelace plumbing ----------
@@ -321,6 +361,7 @@ class Ids:
     use_for_boiler: dict[str, str | None] = field(default_factory=dict)
     boost_room: dict[str, str | None] = field(default_factory=dict)
     window_open: dict[str, str | None] = field(default_factory=dict)
+    last_command: dict[str, str | None] = field(default_factory=dict)
     sensor_problem: dict[str, str | None] = field(default_factory=dict)
     not_heating: dict[str, str | None] = field(default_factory=dict)
 
@@ -360,6 +401,7 @@ def _ids(hass: HomeAssistant, c: HeatingController) -> Ids:
         ids.use_for_boiler[room.id] = eid("switch", "use_for_boiler", room.id)
         ids.boost_room[room.id] = eid("switch", "boost_room", room.id)
         ids.window_open[room.id] = eid("binary_sensor", "window_open", room.id)
+        ids.last_command[room.id] = eid("sensor", "last_command", room.id)
         ids.sensor_problem[room.id] = eid("binary_sensor", "sensor_problem", room.id)
         ids.not_heating[room.id] = eid("binary_sensor", "not_heating", room.id)
     return ids
@@ -500,6 +542,10 @@ def _standard_views(c: HeatingController, ids: Ids, t: dict[str, str]) -> list[d
             }
         )
     valves = [{"entity": e} for r in c.rooms for e in r.batteries + r.windows]
+    for r in c.rooms:
+        if ids.last_command.get(r.id):
+            valves.append({"entity": ids.last_command[r.id], "name": f"{r.name} - {t['last_cmd']}"})
+        valves += [{"entity": v, "secondary_info": "last-updated"} for v in r.valves]
 
     heating_cards: list[Any] = [
         _entities(
@@ -878,7 +924,7 @@ def _schedule_entity_view(entity_id: str, t: dict[str, str]) -> dict[str, Any]:
     )
 
 
-def _valve_card(room: Room, t: dict[str, str]) -> dict[str, Any]:
+def _valve_card(room: Room, ids: Ids, t: dict[str, str]) -> dict[str, Any]:
     batteries = ", ".join(f"states('{b}')" for b in room.batteries)
     windows = ", ".join(f"'{w}'" for w in room.windows)
     battery_txt = (
@@ -892,6 +938,45 @@ def _valve_card(room: Room, t: dict[str, str]) -> dict[str, Any]:
         if room.windows
         else ""
     )
+    cmd = ids.last_command.get(room.id)
+    lines = [" · ".join(x for x in (battery_txt, window_txt) if x)]
+    if cmd:
+        lines.append(
+            f"{t['last_cmd']}: {{% if states('{cmd}') not in ['unknown', 'unavailable'] %}}"
+            f"{{{{ relative_time(as_datetime(states('{cmd}'))) }}}} {t['ago']}"
+            f"{{% if state_attr('{cmd}', 'pending') %}} · {t['unconfirmed']}{{% endif %}}"
+            f"{{% else %}}{t['never']}{{% endif %}}"
+        )
+    if cmd:
+        reasons = "{" + ", ".join(f"'{k}': '{t['r_' + k]}'" for k in _REASONS) + "}"
+        lines.append(
+            f"{t['plan']}: {{% set p = state_attr('{cmd}', 'plan_target') %}}"
+            "{{ (p ~ ' °C · ') if p is not none else '' }}"
+            "{{ " + reasons + ".get(state_attr('" + cmd + "', 'plan_reason'), '') }}"
+        )
+    sensor = room.sensor
+    lines.append(
+        f"{t['sensor']}: {{{{ states('{sensor}') }}}} °C"
+        f"{{% set r = expand('{sensor}') %}}"
+        f"{{% if r and r[0].last_reported %}} · {{{{ relative_time(r[0].last_reported) }}}} {t['ago']}{{% endif %}}"
+    )
+    clim = room.climate
+    lines.append(
+        f"{t['thermostat']}: {{{{ states('{clim}') }}}} · {{{{ state_attr('{clim}', 'temperature') }}}} °C"
+        f" · {{{{ state_attr('{clim}', 'hvac_action') or '-' }}}}"
+    )
+    for valve in room.valves:
+        lines.append(
+            f"{{{{ state_attr('{valve}', 'friendly_name') or '{valve}' }}}}: "
+            f"{{% set r = expand('{valve}') %}}"
+            f"{{% if r and r[0].last_reported %}}{{{{ relative_time(r[0].last_reported) }}}} {t['ago']}"
+            f"{{% else %}}{t['never']}{{% endif %}}"
+        )
+    pending = (
+        f"state_attr('{cmd}', 'pending') and (now() - as_datetime(states('{cmd}'))).total_seconds() > 180"
+        if cmd
+        else "false"
+    )
     open_test = f"[{windows}] | select('is_state', 'on') | list | count > 0" if room.windows else "false"
     low_test = (
         f"[{batteries}] | map('int', 100) | min < 20" if room.batteries else "false"
@@ -899,10 +984,11 @@ def _valve_card(room: Room, t: dict[str, str]) -> dict[str, Any]:
     return {
         "type": "custom:mushroom-template-card",
         "primary": room.name,
-        "secondary": " · ".join(x for x in (battery_txt, window_txt) if x),
+        "secondary": "\n".join(x for x in lines if x),
+        "multiline_secondary": True,
         "icon": "mdi:valve",
         "icon_color": (
-            f"{{{{ 'red' if {open_test} else ('orange' if {low_test} else 'green') }}}}"
+            f"{{{{ 'red' if {open_test} or {pending} else ('orange' if {low_test} else 'green') }}}}"
         ),
         "entity": (room.batteries or room.windows or [room.climate])[0],
         "grid_options": {"columns": 12},
@@ -944,14 +1030,12 @@ def _maintenance_view(c: HeatingController, ids: Ids, t: dict[str, str]) -> dict
             2,
         )
     ]
-    if any(r.batteries or r.windows for r in c.rooms):
-        sections.append(
-            _section(
-                [_heading(t["valves"], "mdi:valve")]
-                + [_valve_card(r, t) for r in c.rooms if r.batteries or r.windows],
-                2,
-            )
+    sections.append(
+        _section(
+            [_heading(t["valves"], "mdi:valve")] + [_valve_card(r, ids, t) for r in c.rooms],
+            2,
         )
+    )
     if ids.emergency:
         sections.append(
             _section(

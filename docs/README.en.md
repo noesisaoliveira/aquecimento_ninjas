@@ -21,7 +21,7 @@ Up to **5 radiator valves (TRVs)**, a setup wizard, and an automatically created
 - **Emergency** – a button in the Maintenance panel that turns the heating on without looking at any temperature sensor: the boiler is switched on and the valves get the temperature of the boiler card (which you can change during the emergency). It asks for the PIN set in Settings > Boiler (4 to 8 digits; without a PIN the button is not shown), stops by itself after the maximum duration (default 2 h) and locks for 5 minutes after 5 wrong PINs. Turning it off does not ask for the PIN.
 - **Windows** – pauses the room 10 s after the window sensor opens and resumes 10 s after it closes; without a sensor, detects an open window from a fast temperature drop.
 - **Reliability** – every command to the valve is verified and resent up to 3 times; if the room sensor fails, the room switches to emergency mode (eco temperature).
-- **Diagnostics** – "room not heating", "sensor problem", failed command count and diagnostics download.
+- **Diagnostics** – "room not heating", "sensor problem", failed command count and diagnostics download. In the Maintenance panel, per room: the requested target and why, the sensor reading, the thermostat state, the last command sent and the last report from each valve.
 - **Notifications** – open windows, low batteries, sensor problems and rooms not heating.
 - **Statistics** – average, minimum, maximum, spread between rooms, boiler hours/cycles today.
 - **Dashboard** – views *Heating* and *Charts* created automatically.
