@@ -155,6 +155,8 @@ class _StatsBase(AquecimentoEntity, RestoreSensor):
 
 
 class BoilerOnTimeSensor(_StatsBase):
+    # Resets at midnight: as a total the recorder reports each day's own hours ("change").
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.HOURS
     _attr_suggested_display_precision = 2

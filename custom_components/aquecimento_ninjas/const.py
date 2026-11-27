@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "aquecimento_ninjas"
-VERSION = "1.6.1"
+VERSION = "1.7.0"
 DOCS_URL = "https://github.com/noesisaoliveira/aquecimento_ninjas"
 
 PLATFORMS: list[Platform] = [
@@ -29,6 +29,7 @@ CONF_HOT_TOLERANCE = "hot_tolerance"
 CONF_MIN_CYCLE = "min_cycle"
 CONF_EMERGENCY_PIN = "emergency_pin"
 CONF_EMERGENCY_HOURS = "emergency_hours"
+CONF_SLOW_SENSORS = "slow_sensors"
 
 CONF_ROOMS = "rooms"
 CONF_ROOM_ID = "id"
@@ -133,6 +134,7 @@ WINDOW_MAX_PAUSE_MINUTES = 60
 
 # Diagnostics
 SENSOR_STALE_HOURS = 3
+SLOW_SENSOR_STALE_HOURS = 8
 NOT_HEATING_DELTA = 1.0
 NOT_HEATING_HOURS = 2
 

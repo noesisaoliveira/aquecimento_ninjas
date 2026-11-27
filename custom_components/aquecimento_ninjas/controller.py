@@ -78,6 +78,7 @@ from .const import (
     CONF_ROOMS,
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULER_TYPE,
+    CONF_SLOW_SENSORS,
     CONF_MASTER_SETTLE_SECONDS,
     CONF_VERIFY_RETRIES,
     CONF_VERIFY_SECONDS,
@@ -113,6 +114,7 @@ from .const import (
     SIGNAL_EMERGENCY,
     SIGNAL_STATS,
     SIGNAL_TEMPERATURES,
+    SLOW_SENSOR_STALE_HOURS,
     SUPPRESS_SECONDS,
     VERIFY_SECONDS,
     WINDOW_CONTACT_SECONDS,
@@ -1365,12 +1367,17 @@ class HeatingController:
     def _diagnostics_tick(self, now: datetime) -> None:
         now = dt_util.utcnow()
         changed = False
+        stale_hours = (
+            SLOW_SENSOR_STALE_HOURS
+            if self.config.get(CONF_SLOW_SENSORS, False)
+            else SENSOR_STALE_HOURS
+        )
         for room in self.rooms:
             rt = self.runtime[room.id]
             state = self.hass.states.get(room.sensor)
             age = self._sensor_age_hours(state)
             rt.sensor_age_hours = round(age, 1) if age is not None else None
-            failed = _state_float(state) is None or (age is not None and age >= SENSOR_STALE_HOURS)
+            failed = _state_float(state) is None or (age is not None and age >= stale_hours)
             if failed != rt.sensor_failed:
                 rt.sensor_failed = failed
                 changed = True
@@ -1478,5 +1485,6 @@ class HeatingController:
 
     @callback
     def _midnight(self, _now: datetime) -> None:
+        async_dispatcher_send(self.hass, self.signal_stats)  # final value of the day
         self.stats.reset()
         async_dispatcher_send(self.hass, self.signal_stats)

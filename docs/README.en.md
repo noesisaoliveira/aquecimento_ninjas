@@ -110,7 +110,7 @@ Then: *Developer tools → Check configuration* → **restart** → in *Settings
 | 2. Boiler | Existing: the climate entity (+ optional relay for statistics). Create: the relay, tolerances and minimum cycle (5 min recommended); emergency PIN and maximum duration |
 | 3. Rooms | Per room: name, Better Thermostat, its valves, room sensor, optional battery and window sensors. Repeat until all rooms are added (max 5 valves) |
 | 4. Presence | People for away mode, delay, notification service (`notify.mobile_app_…`), window/battery notifications |
-| 5. Automations | Enable/disable Comfort/Eco apply, valve sync, presence, away temperature and master switch; set a maximum heating runtime and adjust verification settings |
+| 5. Automations | Enable/disable Comfort/Eco apply, valve sync, presence, away temperature and master switch; set a maximum heating runtime and adjust verification settings; "Slow temperature sensors" for sensors that only report when the temperature changes (failure after 8 h without readings instead of 3 h) |
 | 6. Windows | Enable/disable pausing and adjust debounce, temperature drop and pause duration |
 | 7. Schedule | Keep the current Scheduler card or select an existing Schedule entity |
 | 8. Dashboard | Create dashboard, its title and style (Automatic / Enhanced / Standard) |

@@ -110,7 +110,7 @@ Depois: *Ferramentas de programador → Verificar configuração* → **reinicia
 | 2. Caldeira | Existente: a entidade climate (+ relé opcional para estatísticas). Criar: o relé, tolerâncias e ciclo mínimo (recomendado 5 min); PIN e duração máxima da emergência |
 | 3. Divisões | Por divisão: nome, Better Thermostat, as válvulas, sensor da divisão, sensores de bateria e janela (opcionais). Repete até ter todas (máx. 5 válvulas) |
 | 4. Presença | Pessoas para o modo ausente, atraso, serviço de notificação (`notify.mobile_app_…`), notificações de janela/bateria |
-| 5. Automações | Ativar/desativar aplicação Conforto/Eco, sincronização da válvula, presença, temperatura ausente e interruptor geral; definir a duração máxima do aquecimento; ajustar intervalos e verificações |
+| 5. Automações | Ativar/desativar aplicação Conforto/Eco, sincronização da válvula, presença, temperatura ausente e interruptor geral; definir a duração máxima do aquecimento; ajustar intervalos e verificações; "Sensores de temperatura lentos" para sensores que só enviam quando a temperatura muda (falha após 8 h sem leituras em vez de 3 h) |
 | 6. Janelas | Ativar/desativar a pausa e ajustar estabilização, queda de temperatura e duração da pausa |
 | 7. Horário | Manter o cartão Scheduler atual ou selecionar uma entidade Schedule existente |
 | 8. Painel | Criar painel, o título e o estilo (Automático / Melhorado / Padrão) |

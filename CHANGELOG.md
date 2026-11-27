@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.0 – 2026-11-27
+
+- Fix the "Boiler - hours on per day" chart repeating the previous day's value on the day after: the on-time sensor is now a resetting total and the chart shows each day's own hours. Recreate the dashboard to update the chart; Home Assistant may ask to reset the old statistics of the sensor (Settings > Repairs).
+- Add a "Slow temperature sensors" option (Automation behavior): for room sensors that only report when the temperature changes, a sensor is treated as failed after 8 h without readings instead of 3 h, so the room is not switched to eco by mistake.
+
 ## 1.6.1 – 2026-11-24
 
 - The emergency button now also turns the heating on: the boiler shows On and every valve is sent the boiler target temperature. When it ends, heating and valves go back to what they were before. Turning the heating off during an emergency ends it.

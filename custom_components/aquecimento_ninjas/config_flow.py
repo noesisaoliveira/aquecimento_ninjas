@@ -69,6 +69,7 @@ from .const import (
     CONF_ROOMS,
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULER_TYPE,
+    CONF_SLOW_SENSORS,
     CONF_VERIFY_RETRIES,
     CONF_VERIFY_SECONDS,
     CONF_WINDOW_CONTACT_SECONDS,
@@ -308,6 +309,9 @@ def _automation_schema(defaults: dict[str, Any]) -> vol.Schema:
                 CONF_VERIFY_RETRIES,
                 default=defaults.get(CONF_VERIFY_RETRIES, MAX_RETRIES),
             ): _number_selector(0, 10, 1, "retries"),
+            vol.Required(
+                CONF_SLOW_SENSORS, default=defaults.get(CONF_SLOW_SENSORS, False)
+            ): bool,
             vol.Required(
                 CONF_BATTERY_CHECK_HOUR,
                 default=defaults.get(CONF_BATTERY_CHECK_HOUR, DEFAULT_BATTERY_CHECK_HOUR),

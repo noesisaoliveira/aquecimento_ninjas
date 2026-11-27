@@ -464,7 +464,7 @@ def _weekly_charts(c: HeatingController, ids: Ids, t: dict[str, str]) -> list[di
         charts.append(
             _statistics(
                 t["boiler_hours"], [{"entity": ids.on_time, "name": t["hours_on"]}],
-                "day", "bar", "max",
+                "day", "bar", "change",
             )
         )
     batteries = [{"entity": b} for r in c.rooms for b in r.batteries]

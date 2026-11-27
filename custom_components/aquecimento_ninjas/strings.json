@@ -85,10 +85,12 @@
           "master_settle_seconds": "Delay after turning heating on",
           "verify_seconds": "Verify thermostat command after",
           "verify_retries": "Thermostat command retries",
+          "slow_sensors": "Slow temperature sensors",
           "battery_check_hour": "Daily battery check hour",
           "battery_check_minute": "Daily battery check minute"
         },
         "data_description": {
+          "slow_sensors": "Turn on if your room sensors only report when the temperature changes and can take hours to update. A sensor is then treated as failed after 8 h without readings instead of 3 h.",
           "enable_away_target": "When off, the Away mode switch remains available but does not apply its target temperature.",
           "enable_master": "When off, the master switch does not force the boiler or room thermostats on or off.",
           "max_runtime_hours": "0 disables the safety limit. When enabled, heating turns off after this many continuous hours."
@@ -214,6 +216,7 @@
           "master_settle_seconds": "Delay after turning heating on",
           "verify_seconds": "Verify thermostat command after",
           "verify_retries": "Thermostat command retries",
+          "slow_sensors": "Slow temperature sensors",
           "battery_check_hour": "Daily battery check hour",
           "battery_check_minute": "Daily battery check minute"
         }

@@ -85,10 +85,12 @@
           "master_settle_seconds": "Atraso após ligar o aquecimento",
           "verify_seconds": "Confirmar o comando do termóstato após",
           "verify_retries": "Tentativas de reenvio do comando",
+          "slow_sensors": "Sensores de temperatura lentos",
           "battery_check_hour": "Hora da verificação diária das baterias",
           "battery_check_minute": "Minuto da verificação diária das baterias"
         },
         "data_description": {
+          "slow_sensors": "Ativa se os sensores das divisões só enviam quando a temperatura muda e podem demorar horas a atualizar. O sensor passa a ser considerado em falha após 8 h sem leituras em vez de 3 h.",
           "enable_away_target": "Desligado, o seletor Modo ausente continua disponível, mas não aplica a temperatura de ausência.",
           "enable_master": "Desligado, o interruptor geral não força a caldeira nem os termóstatos das divisões a ligar ou desligar.",
           "max_runtime_hours": "0 desativa o limite de segurança. Ativado, desliga o aquecimento após este número de horas seguidas."
@@ -214,6 +216,7 @@
           "master_settle_seconds": "Atraso após ligar o aquecimento",
           "verify_seconds": "Confirmar o comando do termóstato após",
           "verify_retries": "Tentativas de reenvio do comando",
+          "slow_sensors": "Sensores de temperatura lentos",
           "battery_check_hour": "Hora da verificação diária das baterias",
           "battery_check_minute": "Minuto da verificação diária das baterias"
         }
